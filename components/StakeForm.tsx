@@ -8,13 +8,13 @@ import { stakeTokens } from '@/lib/contracts'
 import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react'
 
 interface StakeFormProps {
-  coachId: string
+  coachId: number
   coachOwner: string
-  currentStake?: string
+  currentStake?: number
   onSuccess?: () => void
 }
 
-export function StakeForm({ coachId, coachOwner, currentStake = "0", onSuccess }: StakeFormProps) {
+export function StakeForm({ coachId, coachOwner, currentStake = 0, onSuccess }: StakeFormProps) {
   const { account, connected } = useWallet()
   const { signAndSubmitTransaction } = useAptosWallet()
   const [amount, setAmount] = useState('')
@@ -29,7 +29,7 @@ export function StakeForm({ coachId, coachOwner, currentStake = "0", onSuccess }
       if (!account) return
       
       try {
-        const response = await fetch(`/api/balance?address=${account.address}`)
+        const response = await fetch(`/api/balance?address=${account.accountAddress}`)
         const data = await response.json()
         if (response.ok) {
           setBalance(data.formattedBalance)
@@ -73,7 +73,7 @@ export function StakeForm({ coachId, coachOwner, currentStake = "0", onSuccess }
         data: {
           function: `${CONTRACT_MODULE}::stake_tokens`,
           typeArguments: [],
-          functionArguments: [parseInt(coachId), stakeAmount],
+          functionArguments: [coachId, stakeAmount],
         },
       })
 
@@ -93,8 +93,8 @@ export function StakeForm({ coachId, coachOwner, currentStake = "0", onSuccess }
     }
   }
 
-  const isOwner = connected && account?.address === coachOwner
-  const hasExistingStake = parseFloat(currentStake) > 0
+  const isOwner = connected && account?.accountAddress === coachOwner
+  const hasExistingStake = currentStake > 0
 
   if (!connected) {
     return (
@@ -123,7 +123,7 @@ export function StakeForm({ coachId, coachOwner, currentStake = "0", onSuccess }
     return (
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <p className="text-green-800 font-medium">
-          Coach is already active with {parseFloat(currentStake) / 100000000} APT staked.
+          Coach is already active with {(currentStake / 100000000).toFixed(4)} APT staked.
         </p>
         <p className="text-sm text-green-600 mt-1">
           Additional staking is not currently supported.

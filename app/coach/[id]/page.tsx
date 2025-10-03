@@ -7,7 +7,7 @@ import { CoachDetails } from '@/components/CoachDetails'
 
 export default function CoachPage() {
   const params = useParams()
-  const coachId = params.id as string
+  const coachId = parseInt(params.id as string)
   const [coach, setCoach] = useState<Coach | null>(null)
   const [loading, setLoading] = useState(true)
 

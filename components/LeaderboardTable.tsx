@@ -28,8 +28,8 @@ export function LeaderboardTable({ entries }: LeaderboardTableProps) {
   return (
     <div className="space-y-2">
       {entries.map((entry, index) => {
-        const isStaked = parseInt(entry.staked_amount) > 0
-        const hasPerformance = parseInt(entry.performance_score) > 0
+        const isStaked = entry.staked_amount > 0
+        const hasPerformance = entry.performance_score > 0
         
         return (
           <Link
@@ -77,13 +77,13 @@ export function LeaderboardTable({ entries }: LeaderboardTableProps) {
                   <div className={`font-semibold ${
                     hasPerformance ? 'text-green-600' : 'text-gray-400'
                   }`}>
-                    {hasPerformance ? formatPercentage(entry.performance_score) : 'Not scored'}
+                    {hasPerformance ? entry.performance_score.toLocaleString() : 'Not scored'}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-sm text-gray-500">Staked</div>
                   <div className="font-semibold">
-                    {isStaked ? `${entry.staked_amount} APT` : 'Not staked'}
+                    {isStaked ? `${(entry.staked_amount / 100000000).toFixed(2)} APT` : 'Not staked'}
                   </div>
                 </div>
               </div>

@@ -32,7 +32,8 @@ export function CoachCard({ coach }: CoachCardProps) {
     setStakingLoading(true)
     
     try {
-      const transactionHash = await stakeTokens(account, coach.id, stakingAmount)
+      const amount = parseFloat(stakingAmount) * 100000000 // Convert APT to octas (1 APT = 10^8 octas)
+      const transactionHash = await stakeTokens(account, coach.id, amount)
       addToast(`Tokens staked successfully! Transaction: ${transactionHash}`, 'success')
       setStakingAmount('')
     } catch (error) {
@@ -83,13 +84,13 @@ export function CoachCard({ coach }: CoachCardProps) {
         <div>
           <p className="text-sm text-gray-500">Performance Score</p>
           <p className="text-lg font-semibold text-green-600">
-            {formatPercentage(coach.performance_score)}
+            {coach.performance_score.toLocaleString()}
           </p>
         </div>
         <div>
           <p className="text-sm text-gray-500">Staked Amount</p>
           <p className="text-lg font-semibold">
-            {coach.staked_amount} APT
+            {(coach.staked_amount / 100000000).toFixed(2)} APT
           </p>
         </div>
       </div>

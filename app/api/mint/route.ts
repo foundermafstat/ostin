@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { mintCoach } from '@/lib/contracts'
 
 export async function POST(request: NextRequest) {
   try {

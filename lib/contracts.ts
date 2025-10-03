@@ -2,33 +2,58 @@ import { aptosClient, CONTRACT_MODULE } from './aptosClient'
 import { Account } from '@aptos-labs/ts-sdk'
 
 export interface Coach {
-  id: string
+  id: number
   owner: string
   rules: string
-  staked_amount: string
-  performance_score: string
+  staked_amount: number
+  performance_score: number
   active: boolean
+  created_at: number
+  last_performance_update: number
+  total_rewards_claimed: number
+  risk_adjusted_return: number
 }
 
 export interface LeaderboardEntry {
-  coach_id: string
+  coach_id: number
   owner: string
-  performance_score: string
-  staked_amount: string
+  performance_score: number
+  staked_amount: number
 }
 
-export async function mintCoach(account: Account, rules: string): Promise<string> {
+export async function mintCoach(account: { address: string }, rules: string, signAndSubmitTransaction: any): Promise<string> {
+  // Validate inputs
+  if (!account) {
+    throw new Error('Account is required')
+  }
+  
+  if (!account.address) {
+    throw new Error('Account address is not available')
+  }
+  
+  if (!signAndSubmitTransaction) {
+    throw new Error('signAndSubmitTransaction function is required')
+  }
+  
+  if (!rules || typeof rules !== 'string') {
+    throw new Error('Rules must be a non-empty string')
+  }
+  
+  if (rules.length > 1000) {
+    throw new Error('Rules must be less than 1000 characters')
+  }
+
   // Convert string to Uint8Array for vector<u8>
   const rulesBytes = new Uint8Array(Buffer.from(rules, 'utf8'))
   
   console.log('Minting coach with rules:', rules)
-  console.log('Rules bytes:', rulesBytes)
-  console.log('Account address:', account.accountAddress)
+  console.log('Rules bytes length:', rulesBytes.length)
+  console.log('Account address:', account.address)
   console.log('Contract module:', CONTRACT_MODULE)
   
   try {
     const transaction = await aptosClient.transaction.build.simple({
-      sender: account.accountAddress,
+      sender: account.address,
       data: {
         function: `${CONTRACT_MODULE}::mint_coach`,
         typeArguments: [],
@@ -36,12 +61,9 @@ export async function mintCoach(account: Account, rules: string): Promise<string
       },
     })
 
-    console.log('Transaction built successfully:', transaction)
+    console.log('Transaction built successfully')
 
-    const committedTransaction = await aptosClient.signAndSubmitTransaction({
-      signer: account,
-      transaction,
-    })
+    const committedTransaction = await signAndSubmitTransaction(transaction)
 
     console.log('Transaction submitted:', committedTransaction.hash)
 
@@ -53,14 +75,28 @@ export async function mintCoach(account: Account, rules: string): Promise<string
     return committedTransaction.hash
   } catch (error) {
     console.error('Error in mintCoach transaction:', error)
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('Resource not found')) {
+        throw new Error('Contract not found. Please make sure the contract is deployed and initialized.')
+      } else if (error.message.includes('insufficient balance')) {
+        throw new Error('Insufficient balance. Please make sure you have enough APT tokens.')
+      } else if (error.message.includes('rejected')) {
+        throw new Error('Transaction was rejected by the user.')
+      } else if (error.message.includes('timeout')) {
+        throw new Error('Transaction timed out. Please try again.')
+      }
+    }
+    
     throw error
   }
 }
 
-export async function stakeTokens(account: Account, coachId: number, amount: number): Promise<string> {
+export async function stakeTokens(account: { address: string }, coachId: number, amount: number, signAndSubmitTransaction: any): Promise<string> {
   try {
     const transaction = await aptosClient.transaction.build.simple({
-      sender: account.accountAddress,
+      sender: account.address,
       data: {
         function: `${CONTRACT_MODULE}::stake_tokens`,
         typeArguments: [],
@@ -68,10 +104,7 @@ export async function stakeTokens(account: Account, coachId: number, amount: num
       },
     })
 
-    const committedTransaction = await aptosClient.signAndSubmitTransaction({
-      signer: account,
-      transaction,
-    })
+    const committedTransaction = await signAndSubmitTransaction(transaction)
 
     await aptosClient.waitForTransaction({
       transactionHash: committedTransaction.hash,
@@ -84,13 +117,13 @@ export async function stakeTokens(account: Account, coachId: number, amount: num
   }
 }
 
-export async function updatePerformance(account: Account, coachId: number, newScore: number, riskAdjustedReturn: number, explanationHash: string): Promise<string> {
+export async function updatePerformance(account: { address: string }, coachId: number, newScore: number, riskAdjustedReturn: number, explanationHash: string, signAndSubmitTransaction: any): Promise<string> {
   // Convert string to Uint8Array for vector<u8>
   const explanationHashBytes = new Uint8Array(Buffer.from(explanationHash, 'utf8'))
   
   try {
     const transaction = await aptosClient.transaction.build.simple({
-      sender: account.accountAddress,
+      sender: account.address,
       data: {
         function: `${CONTRACT_MODULE}::update_performance`,
         typeArguments: [],
@@ -98,10 +131,7 @@ export async function updatePerformance(account: Account, coachId: number, newSc
       },
     })
 
-    const committedTransaction = await aptosClient.signAndSubmitTransaction({
-      signer: account,
-      transaction,
-    })
+    const committedTransaction = await signAndSubmitTransaction(transaction)
 
     await aptosClient.waitForTransaction({
       transactionHash: committedTransaction.hash,
@@ -114,10 +144,10 @@ export async function updatePerformance(account: Account, coachId: number, newSc
   }
 }
 
-export async function claimRewards(account: Account, coachId: number): Promise<string> {
+export async function claimRewards(account: { address: string }, coachId: number, signAndSubmitTransaction: any): Promise<string> {
   try {
     const transaction = await aptosClient.transaction.build.simple({
-      sender: account.accountAddress,
+      sender: account.address,
       data: {
         function: `${CONTRACT_MODULE}::claim_rewards`,
         typeArguments: [],
@@ -125,10 +155,7 @@ export async function claimRewards(account: Account, coachId: number): Promise<s
       },
     })
 
-    const committedTransaction = await aptosClient.signAndSubmitTransaction({
-      signer: account,
-      transaction,
-    })
+    const committedTransaction = await signAndSubmitTransaction(transaction)
 
     await aptosClient.waitForTransaction({
       transactionHash: committedTransaction.hash,
@@ -176,12 +203,16 @@ export async function getCoach(coachId: number): Promise<Coach | null> {
     }
 
     return {
-      id: coachData.id.toString(),
+      id: coachData.id,
       owner: coachData.owner,
       rules: new TextDecoder().decode(new Uint8Array(coachData.rules)),
-      staked_amount: coachData.staked_amount.toString(),
-      performance_score: coachData.performance_score.toString(),
+      staked_amount: coachData.staked_amount,
+      performance_score: coachData.performance_score,
       active: coachData.active,
+      created_at: coachData.created_at,
+      last_performance_update: coachData.last_performance_update,
+      total_rewards_claimed: coachData.total_rewards_claimed,
+      risk_adjusted_return: coachData.risk_adjusted_return,
     }
   } catch (error) {
     console.error('Error fetching coach:', error)
@@ -250,10 +281,10 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
           })
           
           leaderboardEntries.push({
-            coach_id: coachId.toString(),
+            coach_id: coachId,
             owner: coach.owner,
-            performance_score: coach.performance_score.toString(),
-            staked_amount: coach.staked_amount.toString(),
+            performance_score: coach.performance_score,
+            staked_amount: coach.staked_amount,
           })
         }
       } catch (error) {
@@ -331,21 +362,48 @@ export async function getUserCoaches(userAddress: string): Promise<Coach[]> {
   }
 }
 
-export async function initializeContract(account: Account): Promise<string> {
+export async function initializeContract(account: { address: string }, signAndSubmitTransaction?: any): Promise<string> {
+  // Validate inputs
+  if (!account) {
+    throw new Error('Account is required')
+  }
+  
+  if (!account.address) {
+    throw new Error('Account address is not available')
+  }
+  
+  console.log('Initializing contract with account:', account.address)
+  console.log('Contract module:', CONTRACT_MODULE)
+  console.log('signAndSubmitTransaction:', signAndSubmitTransaction)
+  console.log('signAndSubmitTransaction type:', typeof signAndSubmitTransaction)
+  
   try {
+    console.log('Building transaction...')
     const transaction = await aptosClient.transaction.build.simple({
-      sender: account.accountAddress,
+      sender: account.address,
       data: {
         function: `${CONTRACT_MODULE}::initialize`,
         typeArguments: [],
         functionArguments: [],
       },
     })
+    
+    console.log('Transaction built successfully:', transaction)
 
-    const committedTransaction = await aptosClient.signAndSubmitTransaction({
-      signer: account,
-      transaction,
-    })
+    let committedTransaction;
+    
+    if (signAndSubmitTransaction && typeof signAndSubmitTransaction === 'function') {
+      console.log('Using wallet adapter signAndSubmitTransaction')
+      committedTransaction = await signAndSubmitTransaction(transaction)
+    } else {
+      console.log('Using aptosClient signAndSubmitTransaction with Account object')
+      // Fallback: create Account object for signing
+      const accountObj = new Account({ address: account.address })
+      committedTransaction = await aptosClient.signAndSubmitTransaction({
+        signer: accountObj,
+        transaction,
+      })
+    }
 
     await aptosClient.waitForTransaction({
       transactionHash: committedTransaction.hash,
@@ -1004,12 +1062,16 @@ export async function getAllCoaches(): Promise<Coach[]> {
         
         if (coach) {
           const coachData = {
-            id: coach.id.toString(),
+            id: coach.id,
             owner: coach.owner,
             rules: new TextDecoder().decode(new Uint8Array(coach.rules)),
-            staked_amount: coach.staked_amount.toString(),
-            performance_score: coach.performance_score.toString(),
+            staked_amount: coach.staked_amount,
+            performance_score: coach.performance_score,
             active: coach.active,
+            created_at: coach.created_at,
+            last_performance_update: coach.last_performance_update,
+            total_rewards_claimed: coach.total_rewards_claimed,
+            risk_adjusted_return: coach.risk_adjusted_return,
           }
           console.log(`Processed coach ${coachId}:`, coachData)
           allCoaches.push(coachData)

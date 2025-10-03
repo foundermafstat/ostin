@@ -4,6 +4,7 @@ import { useWallet } from '@/components/WalletProvider'
 import { useEffect, useState } from 'react'
 import { CoachCard } from '@/components/CoachCard'
 import { MintCoachForm } from '@/components/MintCoachForm'
+import { ContractStatus } from '@/components/ContractStatus'
 import { Coach } from '@/lib/contracts'
 
 export default function DashboardPage() {
@@ -16,7 +17,7 @@ export default function DashboardPage() {
       if (connected && account) {
         setLoading(true)
         try {
-          const response = await fetch(`/api/user-coaches?address=${account.address}`)
+          const response = await fetch(`/api/user-coaches?address=${account.accountAddress}`)
           const data = await response.json()
           
           if (response.ok) {
@@ -58,6 +59,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6">
+        <ContractStatus />
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <h2 className="text-xl font-semibold mb-4">My Coaches</h2>
           

@@ -98,3 +98,22 @@ Smart Contract (Move, Aptos)
   /tests
     portfolio_coach_test.move
   Move.toml
+
+
+  Transaction submitted: https://explorer.aptoslabs.com/txn/0x962fae81522fc5f96d87da6405d442052f3616012699b63ff2c38b9e7ce7b9b4?network=testnet
+{
+  "Result": {
+    "transaction_hash": "0x962fae81522fc5f96d87da6405d442052f3616012699b63ff2c38b9e7ce7b9b4",
+    "gas_used": 4497,
+    "gas_unit_price": 100,
+    "sender": "b072ec1cffe2cf7888420e00bdcbef08eea61ce639924246218b3a3d84623217",
+    "sequence_number": 0,
+    "replay_protector": {
+      "SequenceNumber": 0
+    },
+    "success": true,
+    "timestamp_us": 1759493622556236,
+    "version": 6893241025,
+    "vm_status": "Executed successfully"
+  }
+}

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const coach = await getCoach(coachId)
+    const coach = await getCoach(parseInt(coachId))
     
     if (!coach) {
       return NextResponse.json(

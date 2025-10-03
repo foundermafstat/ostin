@@ -22,7 +22,7 @@ export default function StakePage() {
 
       try {
         setError(null)
-        const response = await fetch(`/api/user-coaches?address=${account.address}`)
+        const response = await fetch(`/api/user-coaches?address=${account.accountAddress}`)
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }

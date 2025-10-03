@@ -26,6 +26,9 @@ export function Navigation() {
             <Link href="/leaderboard" className="text-gray-600 hover:text-gray-900">
               Leaderboard
             </Link>
+            <Link href="/status" className="text-gray-600 hover:text-gray-900">
+              Status
+            </Link>
             
             {connected && account && (
               <>
@@ -34,6 +37,9 @@ export function Navigation() {
                 </Link>
                 <Link href="/stake" className="text-gray-600 hover:text-gray-900">
                   Stake
+                </Link>
+                <Link href="/initialize" className="text-gray-600 hover:text-gray-900">
+                  Initialize
                 </Link>
               </>
             )}

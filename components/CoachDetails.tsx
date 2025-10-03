@@ -14,7 +14,7 @@ export function CoachDetails({ coach }: CoachDetailsProps) {
   const { account, isConnected } = useWallet()
   
   const isOwner = isConnected && account?.accountAddress.toString() === coach.owner
-  const hasExistingStake = parseInt(coach.staked_amount) > 0
+  const hasExistingStake = coach.staked_amount > 0
 
   return (
     <div className="grid lg:grid-cols-2 gap-8">
@@ -25,14 +25,14 @@ export function CoachDetails({ coach }: CoachDetailsProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <div className="text-2xl font-bold text-green-600">
-                {formatPercentage(coach.performance_score)}
+                {coach.performance_score.toLocaleString()}
               </div>
               <div className="text-sm text-gray-600">Performance Score</div>
             </div>
             
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <div className="text-2xl font-bold text-blue-600">
-                {(parseInt(coach.staked_amount) / 100000000).toFixed(4)}
+                {(coach.staked_amount / 100000000).toFixed(4)}
               </div>
               <div className="text-sm text-gray-600">Staked APT</div>
             </div>
