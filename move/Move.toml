@@ -1,0 +1,17 @@
+[package]
+name = "portfolio_coach"
+version = "1.0.0"
+authors = []
+
+[addresses]
+portfolio_coach = "0xb072ec1cffe2cf7888420e00bdcbef08eea61ce639924246218b3a3d84623217"
+
+[dev-addresses]
+portfolio_coach = "0x1"
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "testnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]

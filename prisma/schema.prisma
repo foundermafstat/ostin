@@ -1,0 +1,66 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Coach {
+  id                String   @id @default(cuid())
+  coachId           String   @unique
+  owner             String
+  rules             String
+  stakedAmount      BigInt   @default(0)
+  performanceScore  Float    @default(0)
+  active            Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  explanations      Explanation[]
+  performanceUpdates PerformanceUpdate[]
+
+  @@map("coaches")
+}
+
+model Explanation {
+  id                String   @id @default(cuid())
+  coachId           String
+  transactionHash   String   @unique
+  explanationHash   String
+  content           String
+  createdAt         DateTime @default(now())
+
+  coach             Coach    @relation(fields: [coachId], references: [coachId], onDelete: Cascade)
+
+  @@map("explanations")
+}
+
+model PerformanceUpdate {
+  id                String   @id @default(cuid())
+  coachId           String
+  oldScore          Float
+  newScore          Float
+  explanationHash   String?
+  transactionHash   String   @unique
+  createdAt         DateTime @default(now())
+
+  coach             Coach    @relation(fields: [coachId], references: [coachId], onDelete: Cascade)
+
+  @@map("performance_updates")
+}
+
+model LeaderboardEntry {
+  id                String   @id @default(cuid())
+  coachId           String   @unique
+  rank              Int
+  performanceScore  Float
+  stakedAmount      BigInt
+  updatedAt         DateTime @updatedAt
+
+  @@map("leaderboard_entries")
+}
