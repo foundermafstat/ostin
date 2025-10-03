@@ -16,11 +16,16 @@ export function CoachCard({ coach }: CoachCardProps) {
   const [stakingAmount, setStakingAmount] = useState('')
   const [stakingLoading, setStakingLoading] = useState(false)
   const [claimingLoading, setClaimingLoading] = useState(false)
-  const { connected, account } = useWallet()
+  const { connected, account, signAndSubmitTransaction } = useWallet()
 
   const handleStake = async () => {
     if (!connected || !account) {
       addToast('Please connect your wallet first', 'error')
+      return
+    }
+
+    if (!signAndSubmitTransaction) {
+      addToast('Wallet transaction function is not available. Please reconnect your wallet.', 'error')
       return
     }
 
@@ -32,8 +37,19 @@ export function CoachCard({ coach }: CoachCardProps) {
     setStakingLoading(true)
     
     try {
+      console.log('CoachCard - signAndSubmitTransaction:', signAndSubmitTransaction)
+      console.log('CoachCard - signAndSubmitTransaction type:', typeof signAndSubmitTransaction)
+      
+      if (!signAndSubmitTransaction) {
+        throw new Error('Wallet transaction function is not available. Please reconnect your wallet.')
+      }
+      
+      if (typeof signAndSubmitTransaction !== 'function') {
+        throw new Error('Wallet transaction function is invalid. Please reconnect your wallet.')
+      }
+      
       const amount = parseFloat(stakingAmount) * 100000000 // Convert APT to octas (1 APT = 10^8 octas)
-      const transactionHash = await stakeTokens(account, coach.id, amount)
+      const transactionHash = await stakeTokens(account, coach.id, amount, signAndSubmitTransaction)
       addToast(`Tokens staked successfully! Transaction: ${transactionHash}`, 'success')
       setStakingAmount('')
     } catch (error) {
@@ -50,10 +66,23 @@ export function CoachCard({ coach }: CoachCardProps) {
       return
     }
 
+    console.log('CoachCard claimRewards - signAndSubmitTransaction:', signAndSubmitTransaction)
+    console.log('CoachCard claimRewards - signAndSubmitTransaction type:', typeof signAndSubmitTransaction)
+
+    if (!signAndSubmitTransaction) {
+      addToast('Wallet transaction function is not available. Please reconnect your wallet.', 'error')
+      return
+    }
+    
+    if (typeof signAndSubmitTransaction !== 'function') {
+      addToast('Wallet transaction function is invalid. Please reconnect your wallet.', 'error')
+      return
+    }
+
     setClaimingLoading(true)
     
     try {
-      const transactionHash = await claimRewards(account, coach.id)
+      const transactionHash = await claimRewards(account, coach.id, signAndSubmitTransaction)
       addToast(`Rewards claimed successfully! Transaction: ${transactionHash}`, 'success')
     } catch (error) {
       console.error('Error claiming rewards:', error)

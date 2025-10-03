@@ -4,8 +4,7 @@ import { useWallet } from '@/components/WalletProvider'
 import { useEffect, useState } from 'react'
 import { CoachCard } from '@/components/CoachCard'
 import { MintCoachForm } from '@/components/MintCoachForm'
-import { ContractStatus } from '@/components/ContractStatus'
-import { Coach } from '@/lib/contracts'
+import { Coach, getAllCoaches } from '@/lib/contracts'
 import { Logo } from '@/components/Logo'
 
 export default function DashboardPage() {
@@ -14,43 +13,22 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchUserCoaches = async () => {
-      if (connected && account) {
-        setLoading(true)
-        try {
-          // For now, show all coaches from the contract for testing
-          // TODO: Change back to user-specific coaches when needed
-          const response = await fetch('/api/leaderboard')
-          const data = await response.json()
-          
-          if (response.ok) {
-            // Convert leaderboard entries to coach format
-            const coachesData = data.map((entry: any) => ({
-              id: entry.coach_id,
-              owner: entry.owner,
-              rules: 'Trading rules from contract', // Placeholder
-              staked_amount: entry.staked_amount,
-              performance_score: entry.performance_score,
-              active: true, // Placeholder
-              created_at: Date.now().toString(), // Placeholder
-              last_performance_update: Date.now().toString(), // Placeholder
-              total_rewards_claimed: '0', // Placeholder
-              risk_adjusted_return: '0', // Placeholder
-            }))
-            setCoaches(coachesData)
-          } else {
-            console.error('Failed to fetch coaches:', data.error)
-          }
-        } catch (error) {
-          console.error('Error fetching coaches:', error)
-        } finally {
-          setLoading(false)
-        }
+    const fetchCoaches = async () => {
+      setLoading(true)
+      try {
+        console.log('Fetching all coaches from contract...')
+        const coachesData = await getAllCoaches()
+        console.log('Coaches received:', coachesData)
+        setCoaches(coachesData)
+      } catch (error) {
+        console.error('Error fetching coaches:', error)
+      } finally {
+        setLoading(false)
       }
     }
 
-    fetchUserCoaches()
-  }, [connected, account])
+    fetchCoaches()
+  }, [])
 
   if (!connected) {
     return (
@@ -78,7 +56,6 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6">
-        <ContractStatus />
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <h2 className="text-xl font-semibold mb-4">My Coaches</h2>
           

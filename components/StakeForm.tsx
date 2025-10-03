@@ -29,7 +29,7 @@ export function StakeForm({ coachId, coachOwner, currentStake = 0, onSuccess }: 
       if (!account) return
       
       try {
-        const response = await fetch(`/api/balance?address=${account.accountAddress}`)
+        const response = await fetch(`/api/balance?address=${account.address}`)
         const data = await response.json()
         if (response.ok) {
           setBalance(data.formattedBalance)
@@ -43,8 +43,21 @@ export function StakeForm({ coachId, coachOwner, currentStake = 0, onSuccess }: 
   }, [account])
 
   const handleStake = async () => {
-    if (!connected || !account || !signAndSubmitTransaction) {
+    if (!connected || !account) {
       setError('Please connect your wallet first')
+      return
+    }
+
+    console.log('StakeForm - signAndSubmitTransaction:', signAndSubmitTransaction)
+    console.log('StakeForm - signAndSubmitTransaction type:', typeof signAndSubmitTransaction)
+
+    if (!signAndSubmitTransaction) {
+      setError('Wallet transaction function is not available. Please reconnect your wallet.')
+      return
+    }
+    
+    if (typeof signAndSubmitTransaction !== 'function') {
+      setError('Wallet transaction function is invalid. Please reconnect your wallet.')
       return
     }
 
@@ -63,23 +76,12 @@ export function StakeForm({ coachId, coachOwner, currentStake = 0, onSuccess }: 
     setSuccess(null)
 
     try {
-      // Import aptosClient here to avoid circular imports
-      const { aptosClient, CONTRACT_MODULE } = await import('@/lib/aptosClient')
-      
+      // Use the stakeTokens function from contracts.ts
       const stakeAmount = Math.floor(parseFloat(amount) * 100000000) // Convert to octas
       
-      const transaction = await aptosClient.transaction.build.simple({
-        sender: account.address,
-        data: {
-          function: `${CONTRACT_MODULE}::stake_tokens`,
-          typeArguments: [],
-          functionArguments: [coachId, stakeAmount],
-        },
-      })
+      const transactionHash = await stakeTokens(account, coachId, stakeAmount, signAndSubmitTransaction)
 
-      const committedTransaction = await signAndSubmitTransaction(transaction)
-
-      setSuccess(`Successfully staked ${amount} APT! Transaction: ${committedTransaction.hash}`)
+      setSuccess(`Successfully staked ${amount} APT! Transaction: ${transactionHash}`)
       setAmount('')
       
       if (onSuccess) {
@@ -93,7 +95,7 @@ export function StakeForm({ coachId, coachOwner, currentStake = 0, onSuccess }: 
     }
   }
 
-  const isOwner = connected && account?.accountAddress === coachOwner
+  const isOwner = connected && account?.address === coachOwner
   const hasExistingStake = currentStake > 0
 
   if (!connected) {

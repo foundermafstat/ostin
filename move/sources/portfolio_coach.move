@@ -220,8 +220,7 @@ module portfolio_coach::portfolio_coach {
         
         if (reward_amount > 0) {
             // Transfer rewards from contract to user
-            let coin = coin::withdraw<AptosCoin>(account, reward_amount);
-            coin::deposit(account_addr, coin);
+            coin::transfer<AptosCoin>(account, account_addr, reward_amount);
             
             coach.total_rewards_claimed = coach.total_rewards_claimed + reward_amount;
             portfolio_coach.total_rewards_pool = portfolio_coach.total_rewards_pool - reward_amount;

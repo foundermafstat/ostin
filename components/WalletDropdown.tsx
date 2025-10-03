@@ -11,6 +11,13 @@ export function WalletDropdown() {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Debug logging
+  useEffect(() => {
+    console.log('WalletDropdown - account:', account)
+    console.log('WalletDropdown - wallet:', wallet)
+    console.log('WalletDropdown - balance:', balance)
+  }, [account, wallet, balance])
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

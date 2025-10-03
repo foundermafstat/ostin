@@ -62,11 +62,11 @@ function useWalletAdapter() {
   // Get balance when wallet connects
   useEffect(() => {
     const fetchBalance = async () => {
-      if (connected && account?.address) {
+      if (connected && account?.accountAddress) {
         try {
-          const accountResource = await aptosClient.getAccountAPTAmount({
-            accountAddress: account.address,
-          })
+        const accountResource = await aptosClient.getAccountAPTAmount({
+          accountAddress: account.accountAddress,
+        })
           setBalance((accountResource / 100000000).toFixed(4)) // Convert from octas to APT
         } catch (error) {
           console.error('Failed to fetch balance:', error)
@@ -78,11 +78,23 @@ function useWalletAdapter() {
     }
 
     fetchBalance()
-  }, [connected, account?.address])
+  }, [connected, account?.accountAddress])
+
+  // Debug logging
+  useEffect(() => {
+    console.log('WalletProvider - account:', account)
+    console.log('WalletProvider - connected:', connected)
+    console.log('WalletProvider - signAndSubmitTransaction:', signAndSubmitTransaction)
+    console.log('WalletProvider - signAndSubmitTransaction type:', typeof signAndSubmitTransaction)
+    if (account) {
+      console.log('WalletProvider - account.accountAddress:', account.accountAddress)
+      console.log('WalletProvider - account.address:', account.address)
+    }
+  }, [account, connected, signAndSubmitTransaction])
 
   return {
     connected,
-    account: account ? { address: String(account.address || '') } : null,
+    account: account ? { address: String(account.accountAddress || account.address || '') } : null,
     wallet: wallet ? { name: wallet.name } : null,
     balance,
     signAndSubmitTransaction,

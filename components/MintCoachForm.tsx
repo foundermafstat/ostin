@@ -1,73 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { addToast } from '@/components/Toaster'
 import { useWallet } from '@/components/WalletProvider'
 import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react'
-import { mintCoach, mintCoachSimple, checkContractStatus } from '@/lib/contracts'
-import Link from 'next/link'
+import { mintCoach } from '@/lib/contracts'
 
 export function MintCoachForm() {
   const [rules, setRules] = useState('')
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{[key: string]: string}>({})
-  const [contractStatus, setContractStatus] = useState<{
-    status: 'initialized' | 'not_initialized' | 'error' | 'loading'
-    message: string
-  }>({ status: 'loading', message: 'Checking contract status...' })
-  const { connected, account } = useWallet()
-  const { signAndSubmitTransaction } = useAptosWallet()
+  const { connected, account, signAndSubmitTransaction } = useWallet()
+  const { signAndSubmitTransaction: aptosSignAndSubmitTransaction } = useAptosWallet()
 
-  const checkStatus = async () => {
-    try {
-      console.log('Checking contract status...')
-      setContractStatus({
-        status: 'loading',
-        message: 'Checking contract status...'
-      })
-      const status = await checkContractStatus()
-      console.log('Contract status result:', status)
-      setContractStatus({
-        status: status.status,
-        message: status.message
-      })
-    } catch (error) {
-      console.error('Error checking contract status:', error)
-      setContractStatus({
-        status: 'error',
-        message: 'Failed to check contract status'
-      })
-    }
-  }
-
-  // Check contract status on component mount
-  useEffect(() => {
-    console.log('MintCoachForm mounted, checking contract status...')
-    checkStatus()
-  }, [])
-
-  // Also check when wallet connection changes
-  useEffect(() => {
-    console.log('Wallet state changed:', { connected, account: !!account, address: account?.address })
-    if (connected && account) {
-      console.log('Wallet connected, rechecking contract status...')
-      checkStatus()
-    }
-  }, [connected, account])
-
-  // Debug effect to track all state changes
-  useEffect(() => {
-    console.log('State update:', {
-      connected,
-      account: !!account,
-      address: account?.address,
-      signAndSubmitTransaction: !!signAndSubmitTransaction,
-      signAndSubmitTransactionType: typeof signAndSubmitTransaction,
-      loading,
-      contractStatus: contractStatus.status
-    })
-  }, [connected, account, signAndSubmitTransaction, loading, contractStatus])
 
   const exampleRules = [
     "Buy when RSI < 30, sell when RSI > 70. Max position size 5% of portfolio. Stop loss at -10%. Focus on blue-chip stocks with market cap > $10B.",
@@ -85,11 +31,6 @@ export function MintCoachForm() {
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {}
     
-    console.log('Validating form...')
-    console.log('Connected:', connected)
-    console.log('Account:', account)
-    console.log('Rules length:', rules.trim().length)
-    
     if (!connected || !account) {
       newErrors.wallet = 'Please connect your wallet first'
     }
@@ -106,7 +47,6 @@ export function MintCoachForm() {
       newErrors.rules = 'Trading rules must be less than 1000 characters'
     }
     
-    console.log('Validation errors:', newErrors)
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -122,23 +62,26 @@ export function MintCoachForm() {
     setErrors({})
     
     try {
-      console.log('Starting mint process...')
-      console.log('Account:', account)
-      console.log('Account address:', account?.address)
-      console.log('Rules:', rules.trim())
-      console.log('signAndSubmitTransaction:', typeof signAndSubmitTransaction)
+      // Mint using the contract function with wallet signing
+      console.log('MintCoachForm - aptosSignAndSubmitTransaction:', aptosSignAndSubmitTransaction)
+      console.log('MintCoachForm - signAndSubmitTransaction:', signAndSubmitTransaction)
+      console.log('MintCoachForm - aptosSignAndSubmitTransaction type:', typeof aptosSignAndSubmitTransaction)
+      console.log('MintCoachForm - signAndSubmitTransaction type:', typeof signAndSubmitTransaction)
       
-      // Try to mint using the contract function
-      if (signAndSubmitTransaction && typeof signAndSubmitTransaction === 'function') {
-        console.log('Using signAndSubmitTransaction method')
-        const transactionHash = await mintCoach(account!, rules.trim(), signAndSubmitTransaction)
-        addToast(`Coach minted successfully! Transaction: ${transactionHash}`, 'success')
-      } else {
-        console.log('signAndSubmitTransaction not available, using simple method')
-        // Use simple mint function that doesn't require wallet signing
-        const transactionHash = await mintCoachSimple(account!, rules.trim())
-        addToast(`Coach minted successfully! Transaction: ${transactionHash}`, 'success')
+      const actualSignAndSubmitTransaction = aptosSignAndSubmitTransaction || signAndSubmitTransaction
+      console.log('MintCoachForm - actualSignAndSubmitTransaction:', actualSignAndSubmitTransaction)
+      console.log('MintCoachForm - actualSignAndSubmitTransaction type:', typeof actualSignAndSubmitTransaction)
+      
+      if (!actualSignAndSubmitTransaction) {
+        throw new Error('Wallet transaction function is not available. Please reconnect your wallet.')
       }
+      
+      if (typeof actualSignAndSubmitTransaction !== 'function') {
+        throw new Error('Wallet transaction function is invalid. Please reconnect your wallet.')
+      }
+      
+      const transactionHash = await mintCoach(account!, rules.trim(), actualSignAndSubmitTransaction)
+      addToast(`Coach minted successfully! Transaction: ${transactionHash}`, 'success')
       
       setRules('')
       
@@ -147,7 +90,6 @@ export function MintCoachForm() {
         window.location.reload()
       }, 2000)
     } catch (error) {
-      console.error('Error minting coach:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       addToast(`Failed to mint coach: ${errorMessage}`, 'error')
       setErrors({ submit: errorMessage })
@@ -168,9 +110,9 @@ export function MintCoachForm() {
             {connected ? 'Wallet Connected' : 'Wallet Not Connected'}
           </span>
         </div>
-        {connected && account?.accountAddress && (
+        {connected && account?.address && (
           <p className="text-xs text-gray-500 mt-1 font-mono">
-            {account.accountAddress.toString().slice(0, 6)}...{account.accountAddress.toString().slice(-4)}
+            {account.address.toString().slice(0, 6)}...{account.address.toString().slice(-4)}
           </p>
         )}
       </div>
@@ -181,35 +123,6 @@ export function MintCoachForm() {
         </div>
       )}
 
-      {/* Contract Status */}
-      <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${
-              contractStatus.status === 'initialized' ? 'bg-green-500' : 
-              contractStatus.status === 'not_initialized' ? 'bg-red-500' :
-              contractStatus.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-            }`}></div>
-            <span className="text-sm text-gray-600">
-              Contract Status: {contractStatus.status === 'initialized' ? 'Ready' : 
-                              contractStatus.status === 'not_initialized' ? 'Not Initialized' :
-                              contractStatus.status === 'error' ? 'Error' : 'Checking...'}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              console.log('Manual refresh clicked')
-              checkStatus()
-            }}
-            disabled={contractStatus.status === 'loading'}
-            className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50"
-          >
-            {contractStatus.status === 'loading' ? 'Checking...' : 'Refresh'}
-          </button>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">{contractStatus.message}</p>
-      </div>
 
       
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -290,23 +203,6 @@ export function MintCoachForm() {
         >
           {loading ? 'Minting...' : 'Mint Coach'}
         </Button>
-        
-        {/* Debug info */}
-        <div className="mt-2 text-xs text-gray-500 space-y-1 bg-yellow-50 p-2 rounded border">
-          <p><strong>Debug Info:</strong></p>
-          <p>• connected: {String(connected)} (type: {typeof connected})</p>
-          <p>• account: {String(!!account)} (type: {typeof account})</p>
-          <p>• account?.address: {String(!!account?.address)} (value: {account?.address || 'undefined'})</p>
-          <p>• signAndSubmitTransaction: {String(!!signAndSubmitTransaction)} (type: {typeof signAndSubmitTransaction})</p>
-          <p>• loading: {String(loading)} (type: {typeof loading})</p>
-          <p>• contractStatus: {contractStatus.status}</p>
-          <hr className="my-1" />
-          <p><strong>Button disabled calculation:</strong></p>
-          <p>• loading: {String(loading)}</p>
-          <p>• !connected: {String(!connected)}</p>
-          <p>• !account?.address: {String(!account?.address)}</p>
-          <p>• <strong>Final disabled: {String(loading || !connected || !account?.address)}</strong></p>
-        </div>
       </form>
     </div>
   )

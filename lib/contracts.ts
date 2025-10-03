@@ -39,6 +39,15 @@ export async function mintCoach(account: { address: string }, rules: string, sig
     throw new Error('Rules must be less than 1000 characters')
   }
 
+  // Enhanced validation for signAndSubmitTransaction
+  if (!signAndSubmitTransaction) {
+    throw new Error('Wallet transaction function is not available. Please reconnect your wallet.')
+  }
+  
+  if (typeof signAndSubmitTransaction !== 'function') {
+    throw new Error('Wallet transaction function is invalid. Please reconnect your wallet.')
+  }
+
   // Convert string to Uint8Array for vector<u8>
   const rulesBytes = new Uint8Array(Buffer.from(rules, 'utf8'))
   
@@ -46,25 +55,19 @@ export async function mintCoach(account: { address: string }, rules: string, sig
   console.log('Rules bytes length:', rulesBytes.length)
   console.log('Account address:', account.address)
   console.log('Contract module:', CONTRACT_MODULE)
-  console.log('signAndSubmitTransaction type:', typeof signAndSubmitTransaction)
   
   try {
-    // Build the transaction
+    // Build the transaction using the correct format
     const transaction = await aptosClient.transaction.build.simple({
       sender: account.address,
       data: {
-        function: `${CONTRACT_MODULE}::mint_coach`,
+        function: `${CONTRACT_MODULE}::mint_coach` as any,
         typeArguments: [],
         functionArguments: [rulesBytes],
       },
     })
 
-    console.log('Transaction built successfully:', transaction)
-
-    // Check if signAndSubmitTransaction is available and is a function
-    if (!signAndSubmitTransaction || typeof signAndSubmitTransaction !== 'function') {
-      throw new Error('Wallet transaction function is not available. Please reconnect your wallet.')
-    }
+    console.log('Transaction built successfully')
 
     // Submit the transaction
     const committedTransaction = await signAndSubmitTransaction(transaction)
@@ -100,8 +103,8 @@ export async function mintCoach(account: { address: string }, rules: string, sig
   }
 }
 
-// Alternative mint function that doesn't require signAndSubmitTransaction
-export async function mintCoachSimple(account: { address: string }, rules: string): Promise<string> {
+
+export async function stakeTokens(account: { address: string }, coachId: number, amount: number, signAndSubmitTransaction: any): Promise<string> {
   // Validate inputs
   if (!account) {
     throw new Error('Account is required')
@@ -111,122 +114,227 @@ export async function mintCoachSimple(account: { address: string }, rules: strin
     throw new Error('Account address is not available')
   }
   
-  if (!rules || typeof rules !== 'string') {
-    throw new Error('Rules must be a non-empty string')
+  if (!coachId || coachId <= 0) {
+    throw new Error('Valid coach ID is required')
   }
   
-  if (rules.length > 1000) {
-    throw new Error('Rules must be less than 1000 characters')
+  if (!amount || amount <= 0) {
+    throw new Error('Valid stake amount is required')
   }
 
-  // Convert string to Uint8Array for vector<u8>
-  const rulesBytes = new Uint8Array(Buffer.from(rules, 'utf8'))
+  // Enhanced validation for signAndSubmitTransaction
+  if (!signAndSubmitTransaction) {
+    throw new Error('Wallet transaction function is not available. Please reconnect your wallet.')
+  }
   
-  console.log('Minting coach with simple method...')
-  console.log('Rules:', rules)
+  if (typeof signAndSubmitTransaction !== 'function') {
+    throw new Error('Wallet transaction function is invalid. Please reconnect your wallet.')
+  }
+
+  console.log('Staking tokens for coach:', coachId, 'amount:', amount)
   console.log('Account address:', account.address)
   console.log('Contract module:', CONTRACT_MODULE)
-  
-  try {
-    // Build the transaction
-    const transaction = await aptosClient.transaction.build.simple({
-      sender: account.address,
-      data: {
-        function: `${CONTRACT_MODULE}::mint_coach`,
-        typeArguments: [],
-        functionArguments: [rulesBytes],
-      },
-    })
 
-    console.log('Transaction built successfully:', transaction)
-
-    // For now, we'll return a mock transaction hash
-    // In a real implementation, this would need to be signed by the wallet
-    const mockTransactionHash = `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
-    console.log('Mock transaction hash:', mockTransactionHash)
-    
-    // Simulate a delay
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    return mockTransactionHash
-  } catch (error) {
-    console.error('Error in mintCoachSimple:', error)
-    throw error
-  }
-}
-
-export async function stakeTokens(account: { address: string }, coachId: number, amount: number, signAndSubmitTransaction: any): Promise<string> {
   try {
     const transaction = await aptosClient.transaction.build.simple({
       sender: account.address,
       data: {
-        function: `${CONTRACT_MODULE}::stake_tokens`,
+        function: `${CONTRACT_MODULE}::stake_tokens` as any,
         typeArguments: [],
         functionArguments: [coachId, amount],
       },
     })
 
+    console.log('Stake transaction built successfully')
+
     const committedTransaction = await signAndSubmitTransaction(transaction)
+
+    console.log('Stake transaction submitted:', committedTransaction.hash)
 
     await aptosClient.waitForTransaction({
       transactionHash: committedTransaction.hash,
     })
 
+    console.log('Stake transaction confirmed:', committedTransaction.hash)
     return committedTransaction.hash
   } catch (error) {
     console.error('Error in stakeTokens transaction:', error)
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('Resource not found')) {
+        throw new Error('Contract not found. Please make sure the contract is deployed and initialized.')
+      } else if (error.message.includes('insufficient balance')) {
+        throw new Error('Insufficient balance. Please make sure you have enough APT tokens.')
+      } else if (error.message.includes('rejected')) {
+        throw new Error('Transaction was rejected by the user.')
+      } else if (error.message.includes('timeout')) {
+        throw new Error('Transaction timed out. Please try again.')
+      } else if (error.message.includes('E_COACH_NOT_FOUND')) {
+        throw new Error('Coach not found. Please check the coach ID.')
+      } else if (error.message.includes('E_UNAUTHORIZED')) {
+        throw new Error('You are not authorized to stake for this coach.')
+      } else if (error.message.includes('E_COACH_ALREADY_ACTIVE')) {
+        throw new Error('This coach is already active and staked.')
+      } else if (error.message.includes('E_INVALID_AMOUNT')) {
+        throw new Error('Invalid stake amount.')
+      }
+    }
+    
     throw error
   }
 }
 
 export async function updatePerformance(account: { address: string }, coachId: number, newScore: number, riskAdjustedReturn: number, explanationHash: string, signAndSubmitTransaction: any): Promise<string> {
+  // Validate inputs
+  if (!account) {
+    throw new Error('Account is required')
+  }
+  
+  if (!account.address) {
+    throw new Error('Account address is not available')
+  }
+  
+  if (!coachId || coachId <= 0) {
+    throw new Error('Valid coach ID is required')
+  }
+  
+  if (newScore < 0 || newScore > 1000000) {
+    throw new Error('Score must be between 0 and 1,000,000')
+  }
+  
+  if (riskAdjustedReturn < 0 || riskAdjustedReturn > 1000000) {
+    throw new Error('Risk adjusted return must be between 0 and 1,000,000 basis points')
+  }
+
+  if (!signAndSubmitTransaction || typeof signAndSubmitTransaction !== 'function') {
+    throw new Error('Wallet transaction function is not available. Please reconnect your wallet.')
+  }
+
   // Convert string to Uint8Array for vector<u8>
   const explanationHashBytes = new Uint8Array(Buffer.from(explanationHash, 'utf8'))
   
+  console.log('Updating performance for coach:', coachId, 'score:', newScore, 'risk:', riskAdjustedReturn)
+  console.log('Account address:', account.address)
+  console.log('Contract module:', CONTRACT_MODULE)
+
   try {
     const transaction = await aptosClient.transaction.build.simple({
       sender: account.address,
       data: {
-        function: `${CONTRACT_MODULE}::update_performance`,
+        function: `${CONTRACT_MODULE}::update_performance` as any,
         typeArguments: [],
         functionArguments: [coachId, newScore, riskAdjustedReturn, explanationHashBytes],
       },
     })
 
+    console.log('Update performance transaction built successfully')
+
     const committedTransaction = await signAndSubmitTransaction(transaction)
+
+    console.log('Update performance transaction submitted:', committedTransaction.hash)
 
     await aptosClient.waitForTransaction({
       transactionHash: committedTransaction.hash,
     })
 
+    console.log('Update performance transaction confirmed:', committedTransaction.hash)
     return committedTransaction.hash
   } catch (error) {
     console.error('Error in updatePerformance transaction:', error)
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('Resource not found')) {
+        throw new Error('Contract not found. Please make sure the contract is deployed and initialized.')
+      } else if (error.message.includes('rejected')) {
+        throw new Error('Transaction was rejected by the user.')
+      } else if (error.message.includes('timeout')) {
+        throw new Error('Transaction timed out. Please try again.')
+      } else if (error.message.includes('E_COACH_NOT_FOUND')) {
+        throw new Error('Coach not found. Please check the coach ID.')
+      } else if (error.message.includes('E_UNAUTHORIZED')) {
+        throw new Error('You are not authorized to update this coach.')
+      } else if (error.message.includes('E_COACH_NOT_ACTIVE')) {
+        throw new Error('Coach is not active. Please stake tokens first.')
+      } else if (error.message.includes('E_INVALID_SCORE')) {
+        throw new Error('Invalid score. Score must be between 0 and 1,000,000.')
+      }
+    }
+    
     throw error
   }
 }
 
 export async function claimRewards(account: { address: string }, coachId: number, signAndSubmitTransaction: any): Promise<string> {
+  // Validate inputs
+  if (!account) {
+    throw new Error('Account is required')
+  }
+  
+  if (!account.address) {
+    throw new Error('Account address is not available')
+  }
+  
+  if (!coachId || coachId <= 0) {
+    throw new Error('Valid coach ID is required')
+  }
+
+  // Enhanced validation for signAndSubmitTransaction
+  if (!signAndSubmitTransaction) {
+    throw new Error('Wallet transaction function is not available. Please reconnect your wallet.')
+  }
+  
+  if (typeof signAndSubmitTransaction !== 'function') {
+    throw new Error('Wallet transaction function is invalid. Please reconnect your wallet.')
+  }
+
+  console.log('Claiming rewards for coach:', coachId)
+  console.log('Account address:', account.address)
+  console.log('Contract module:', CONTRACT_MODULE)
+
   try {
     const transaction = await aptosClient.transaction.build.simple({
       sender: account.address,
       data: {
-        function: `${CONTRACT_MODULE}::claim_rewards`,
+        function: `${CONTRACT_MODULE}::claim_rewards` as any,
         typeArguments: [],
         functionArguments: [coachId],
       },
     })
 
+    console.log('Claim rewards transaction built successfully')
+
     const committedTransaction = await signAndSubmitTransaction(transaction)
+
+    console.log('Claim rewards transaction submitted:', committedTransaction.hash)
 
     await aptosClient.waitForTransaction({
       transactionHash: committedTransaction.hash,
     })
 
+    console.log('Claim rewards transaction confirmed:', committedTransaction.hash)
     return committedTransaction.hash
   } catch (error) {
     console.error('Error in claimRewards transaction:', error)
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('Resource not found')) {
+        throw new Error('Contract not found. Please make sure the contract is deployed and initialized.')
+      } else if (error.message.includes('rejected')) {
+        throw new Error('Transaction was rejected by the user.')
+      } else if (error.message.includes('timeout')) {
+        throw new Error('Transaction timed out. Please try again.')
+      } else if (error.message.includes('E_COACH_NOT_FOUND')) {
+        throw new Error('Coach not found. Please check the coach ID.')
+      } else if (error.message.includes('E_UNAUTHORIZED')) {
+        throw new Error('You are not authorized to claim rewards for this coach.')
+      } else if (error.message.includes('E_COACH_NOT_ACTIVE')) {
+        throw new Error('Coach is not active. Please stake tokens first.')
+      }
+    }
+    
     throw error
   }
 }
@@ -240,7 +348,7 @@ export async function getCoach(coachId: number): Promise<Coach | null> {
 
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
 
     if (!resource || !resource.data) {
@@ -266,16 +374,16 @@ export async function getCoach(coachId: number): Promise<Coach | null> {
     }
 
     return {
-      id: coachData.id,
-      owner: coachData.owner,
-      rules: new TextDecoder().decode(new Uint8Array(coachData.rules)),
-      staked_amount: coachData.staked_amount,
-      performance_score: coachData.performance_score,
-      active: coachData.active,
-      created_at: coachData.created_at,
-      last_performance_update: coachData.last_performance_update,
-      total_rewards_claimed: coachData.total_rewards_claimed,
-      risk_adjusted_return: coachData.risk_adjusted_return,
+      id: (coachData as any).id || 0,
+      owner: (coachData as any).owner || '',
+      rules: (coachData as any).rules ? new TextDecoder().decode(new Uint8Array((coachData as any).rules)) : '',
+      staked_amount: (coachData as any).staked_amount || 0,
+      performance_score: (coachData as any).performance_score || 0,
+      active: (coachData as any).active || false,
+      created_at: (coachData as any).created_at || 0,
+      last_performance_update: (coachData as any).last_performance_update || 0,
+      total_rewards_claimed: (coachData as any).total_rewards_claimed || 0,
+      risk_adjusted_return: (coachData as any).risk_adjusted_return || 0,
     }
   } catch (error) {
     console.error('Error fetching coach:', error)
@@ -294,7 +402,7 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
     
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
     
     console.log('Resource fetched:', resource)
@@ -342,17 +450,17 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
         
         if (coach) {
           console.log(`Found coach ${coachId}:`, {
-            owner: coach.owner,
-            performance_score: coach.performance_score,
-            staked_amount: coach.staked_amount,
-            active: coach.active
+            owner: (coach as any).owner,
+            performance_score: (coach as any).performance_score,
+            staked_amount: (coach as any).staked_amount,
+            active: (coach as any).active
           })
           
           leaderboardEntries.push({
             coach_id: coachId,
-            owner: coach.owner,
-            performance_score: coach.performance_score,
-            staked_amount: coach.staked_amount,
+            owner: (coach as any).owner || '',
+            performance_score: (coach as any).performance_score || 0,
+            staked_amount: (coach as any).staked_amount || 0,
           })
         }
       } catch (error) {
@@ -363,10 +471,10 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
     
     // Sort by performance score (descending), then by staked amount (descending)
     leaderboardEntries.sort((a, b) => {
-      const scoreA = parseInt(a.performance_score)
-      const scoreB = parseInt(b.performance_score)
-      const stakeA = parseInt(a.staked_amount)
-      const stakeB = parseInt(b.staked_amount)
+      const scoreA = parseInt((a.performance_score || '0') as string)
+      const scoreB = parseInt((b.performance_score || '0') as string)
+      const stakeA = parseInt((a.staked_amount || '0') as string)
+      const stakeB = parseInt((b.staked_amount || '0') as string)
       
       // First sort by performance score
       if (scoreA !== scoreB) {
@@ -399,7 +507,7 @@ export async function getUserCoaches(userAddress: string): Promise<Coach[]> {
     // Get user's coach IDs from UserCoaches resource
     const userCoachesResource = await aptosClient.getAccountResource({
       accountAddress: userAddress,
-      resourceType: `${CONTRACT_MODULE}::UserCoaches`,
+      resourceType: `${CONTRACT_MODULE}::UserCoaches` as any,
     })
 
     if (!userCoachesResource || !userCoachesResource.data) {
@@ -469,7 +577,7 @@ export async function initializeContract(account: { address: string }, signAndSu
     const transaction = await aptosClient.transaction.build.simple({
       sender: account.address,
       data: {
-        function: `${CONTRACT_MODULE}::initialize`,
+        function: `${CONTRACT_MODULE}::initialize` as any,
         typeArguments: [],
         functionArguments: [],
       },
@@ -538,7 +646,7 @@ export async function getTotalStaked(): Promise<string> {
 
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
 
     if (!resource || !resource.data) {
@@ -546,7 +654,7 @@ export async function getTotalStaked(): Promise<string> {
       return '0'
     }
 
-    return resource.data.total_staked.toString()
+    return (resource.data.total_staked || 0).toString()
   } catch (error) {
     console.error('Error fetching total staked:', error)
     return '0'
@@ -562,7 +670,7 @@ export async function getTotalRewardsPool(): Promise<string> {
 
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
 
     if (!resource || !resource.data) {
@@ -570,7 +678,7 @@ export async function getTotalRewardsPool(): Promise<string> {
       return '0'
     }
 
-    return resource.data.total_rewards_pool.toString()
+    return (resource.data.total_rewards_pool || 0).toString()
   } catch (error) {
     console.error('Error fetching total rewards pool:', error)
     return '0'
@@ -586,7 +694,7 @@ export async function getLeaderboardLength(): Promise<number> {
 
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
 
     if (!resource || !resource.data) {
@@ -594,7 +702,7 @@ export async function getLeaderboardLength(): Promise<number> {
       return 0
     }
 
-    return parseInt(resource.data.leaderboard_length as string)
+    return parseInt((resource.data.leaderboard_length || '0') as string)
   } catch (error) {
     console.error('Error fetching leaderboard length:', error)
     return 0
@@ -609,7 +717,7 @@ export async function isContractInitialized(): Promise<boolean> {
 
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
 
     // Check if resource exists and has the expected structure
@@ -646,7 +754,7 @@ export async function getContractStatus(): Promise<{
 
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
 
     // Check if resource exists and has the expected structure
@@ -689,7 +797,7 @@ export async function checkContractStatus(): Promise<{
     // Try to get the PortfolioCoach resource
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
     
     console.log('Resource response:', resource)
@@ -783,7 +891,7 @@ export async function getContractInfo(): Promise<{
 
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
 
     return {
@@ -817,7 +925,7 @@ export async function getContractHealth(): Promise<{
 
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
 
     // Check if resource exists and has the expected structure
@@ -878,7 +986,7 @@ export async function getContractMetrics(): Promise<{
 
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
 
     if (!resource || !resource.data) {
@@ -887,8 +995,8 @@ export async function getContractMetrics(): Promise<{
 
     const leaderboard = resource.data.leaderboard as any
     const coaches = resource.data.coaches as any
-    const leaderboardLength = parseInt(resource.data.leaderboard_length as string)
-    const nextCoachId = parseInt(resource.data.next_coach_id as string)
+    const leaderboardLength = parseInt((resource.data.leaderboard_length || '0') as string)
+    const nextCoachId = parseInt((resource.data.next_coach_id || '1') as string)
 
     let totalCoaches = 0
     let totalPerformance = 0
@@ -899,17 +1007,17 @@ export async function getContractMetrics(): Promise<{
       for (let coachId = 1; coachId < nextCoachId; coachId++) {
         try {
           const coach = await aptosClient.getTableItem({
-            tableHandle: coaches.handle,
+            handle: coaches.handle,
             data: {
               key: coachId.toString(),
-              keyType: 'u64',
-              valueType: `${CONTRACT_MODULE}::Coach`,
+              key_type: 'u64',
+              value_type: `${CONTRACT_MODULE}::Coach`,
             },
           })
           
           if (coach) {
             totalCoaches++
-            totalPerformance += parseInt(coach.performance_score)
+            totalPerformance += parseInt((coach as any).performance_score || '0')
           }
         } catch (error) {
           console.warn(`Error fetching coach ${coachId} for metrics:`, error)
@@ -925,28 +1033,28 @@ export async function getContractMetrics(): Promise<{
         try {
           // Get coach ID from leaderboard table
           const coachId = await aptosClient.getTableItem({
-            tableHandle: leaderboardHandle,
+            handle: leaderboardHandle,
             data: {
               key: i.toString(),
-              keyType: 'u64',
-              valueType: 'u64',
+              key_type: 'u64',
+              value_type: 'u64',
             },
           })
           
           if (coachId) {
             // Get coach data from coaches table
             const coach = await aptosClient.getTableItem({
-              tableHandle: coaches.handle,
+              handle: coaches.handle,
               data: {
                 key: coachId.toString(),
-                keyType: 'u64',
-                valueType: `${CONTRACT_MODULE}::Coach`,
+                key_type: 'u64',
+                value_type: `${CONTRACT_MODULE}::Coach`,
               },
             })
             
             if (coach) {
               totalCoaches++
-              totalPerformance += parseInt(coach.performance_score)
+              totalPerformance += parseInt((coach as any).performance_score || '0')
             }
           }
         } catch (error) {
@@ -960,8 +1068,8 @@ export async function getContractMetrics(): Promise<{
 
     return {
       totalCoaches,
-      totalStaked: resource.data.total_staked.toString(),
-      totalRewardsPool: resource.data.total_rewards_pool.toString(),
+      totalStaked: (resource.data.total_staked || 0).toString(),
+      totalRewardsPool: (resource.data.total_rewards_pool || 0).toString(),
       leaderboardLength,
       averagePerformance
     }
@@ -1228,6 +1336,86 @@ export async function getContractStatusOverview(): Promise<{
   }
 }
 
+export async function debugContract(): Promise<any> {
+  try {
+    console.log('=== DEBUG CONTRACT ===')
+    console.log('CONTRACT_MODULE:', CONTRACT_MODULE)
+    console.log('Contract address:', CONTRACT_MODULE.split('::')[0])
+    
+    // Check if contract is initialized
+    const resource = await aptosClient.getAccountResource({
+      accountAddress: CONTRACT_MODULE.split('::')[0],
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
+    })
+    
+    console.log('Resource found:', !!resource)
+    console.log('Resource data:', resource?.data)
+    
+    if (resource?.data) {
+      const resourceData = resource.data
+      console.log('next_coach_id:', resourceData.next_coach_id)
+      console.log('total_staked:', resourceData.total_staked)
+      console.log('leaderboard_length:', resourceData.leaderboard_length)
+      
+      // Try to get a specific coach
+      const coaches = resourceData.coaches as any
+      if (coaches?.handle) {
+        console.log('Coaches table handle:', coaches.handle)
+        
+        // Try to get coach with ID 1
+        try {
+          const coach1 = await aptosClient.getTableItem({
+            handle: coaches.handle,
+            data: {
+              key_type: 'u64',
+              value_type: `${CONTRACT_MODULE}::Coach`,
+              key: '1',
+            },
+          })
+          console.log('Coach 1 data:', coach1)
+        } catch (error) {
+          console.log('Error fetching coach 1:', error)
+        }
+        
+        // Try to get all coaches by checking IDs from 1 to next_coach_id
+        const nextCoachId = parseInt(resourceData.next_coach_id as string)
+        console.log('Checking for coaches from 1 to', nextCoachId - 1)
+        
+        for (let i = 1; i < nextCoachId; i++) {
+          try {
+            const coach = await aptosClient.getTableItem({
+              handle: coaches.handle,
+              data: {
+                key_type: 'u64',
+                value_type: `${CONTRACT_MODULE}::Coach`,
+                key: i.toString(),
+              },
+            })
+            console.log(`Coach ${i} found:`, coach)
+          } catch (error) {
+            console.log(`Coach ${i} not found:`, error instanceof Error ? error.message : 'Unknown error')
+          }
+        }
+      }
+    }
+    
+    return {
+      contractModule: CONTRACT_MODULE,
+      contractAddress: CONTRACT_MODULE.split('::')[0],
+      resourceFound: !!resource,
+      resourceData: resource?.data,
+      nextCoachId: resource?.data?.next_coach_id,
+      totalStaked: resource?.data?.total_staked,
+      leaderboardLength: resource?.data?.leaderboard_length
+    }
+  } catch (error) {
+    console.error('Debug contract error:', error)
+    return {
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
 export async function getAllCoaches(): Promise<Coach[]> {
   try {
     console.log('=== getAllCoaches called ===')
@@ -1241,7 +1429,7 @@ export async function getAllCoaches(): Promise<Coach[]> {
     console.log('Fetching contract resource...')
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
 
     console.log('Resource response:', resource)
@@ -1286,9 +1474,9 @@ export async function getAllCoaches(): Promise<Coach[]> {
           // Decode rules from hex string
           let rulesText = ''
           try {
-            if (typeof coach.rules === 'string' && coach.rules.startsWith('0x')) {
+            if (typeof (coach as any).rules === 'string' && (coach as any).rules.startsWith('0x')) {
               // Remove 0x prefix and convert hex to bytes
-              const hexString = coach.rules.slice(2)
+              const hexString = (coach as any).rules.slice(2)
               const bytes = new Uint8Array(hexString.length / 2)
               for (let i = 0; i < hexString.length; i += 2) {
                 bytes[i / 2] = parseInt(hexString.substr(i, 2), 16)
@@ -1296,7 +1484,7 @@ export async function getAllCoaches(): Promise<Coach[]> {
               rulesText = new TextDecoder().decode(bytes)
             } else {
               // If it's already a Uint8Array
-              rulesText = new TextDecoder().decode(new Uint8Array(coach.rules))
+              rulesText = new TextDecoder().decode(new Uint8Array((coach as any).rules))
             }
           } catch (error) {
             console.warn(`Error decoding rules for coach ${coachId}:`, error)
@@ -1304,16 +1492,16 @@ export async function getAllCoaches(): Promise<Coach[]> {
           }
 
           const coachData = {
-            id: coach.id,
-            owner: coach.owner,
+            id: (coach as any).id || 0,
+            owner: (coach as any).owner || '',
             rules: rulesText,
-            staked_amount: coach.staked_amount,
-            performance_score: coach.performance_score,
-            active: coach.active,
-            created_at: coach.created_at,
-            last_performance_update: coach.last_performance_update,
-            total_rewards_claimed: coach.total_rewards_claimed,
-            risk_adjusted_return: coach.risk_adjusted_return,
+            staked_amount: (coach as any).staked_amount || 0,
+            performance_score: (coach as any).performance_score || 0,
+            active: (coach as any).active || false,
+            created_at: (coach as any).created_at || 0,
+            last_performance_update: (coach as any).last_performance_update || 0,
+            total_rewards_claimed: (coach as any).total_rewards_claimed || 0,
+            risk_adjusted_return: (coach as any).risk_adjusted_return || 0,
           }
           console.log(`Processed coach ${coachId}:`, coachData)
           allCoaches.push(coachData)

@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stakeTokens } from '@/lib/contracts'
-import { Account } from '@aptos-labs/ts-sdk'
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,27 +20,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create Account instance from address
-    const aptosAccount = Account.fromPrivateKey({ privateKey: new Uint8Array(32) }) // This won't work for actual transactions
-    // For now, we'll need to get the account from the wallet context
-    // This is a limitation - we need the actual Account instance from the wallet
-    
-    console.log('Staking tokens for coach:', coachId, 'amount:', amount)
-    
-    const transactionHash = await stakeTokens(aptosAccount, parseInt(coachId), parseInt(amount))
-    
-    console.log('Stake transaction successful:', transactionHash)
-    
+    if (isNaN(parseInt(coachId))) {
+      return NextResponse.json(
+        { error: 'Coach ID must be a valid number' },
+        { status: 400 }
+      )
+    }
+
+    if (isNaN(parseInt(amount))) {
+      return NextResponse.json(
+        { error: 'Amount must be a valid number' },
+        { status: 400 }
+      )
+    }
+
+    // Staking must be done client-side with wallet connection
+    // This API endpoint is for validation only
     return NextResponse.json({
       success: true,
-      transactionHash,
-      message: `Successfully staked ${amount} APT tokens for coach ${coachId}`
+      message: 'Validation passed. Please use wallet connection to stake tokens.',
+      requiresWallet: true
     })
   } catch (error) {
     console.error('Error in stake API:', error)
     return NextResponse.json(
       { 
-        error: 'Failed to stake tokens',
+        error: 'Failed to process stake request',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

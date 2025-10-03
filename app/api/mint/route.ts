@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { mintCoach } from '@/lib/contracts'
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,14 +25,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For now, we'll return an error since we can't sign transactions on the server
-    // This is just a placeholder for the alternative method
+    // Minting must be done client-side with wallet connection
+    // This API endpoint is for validation only
     return NextResponse.json(
       { 
-        error: 'Server-side minting not implemented. Please use wallet connection method.',
+        success: true,
+        message: 'Validation passed. Please use wallet connection to mint coach.',
         requiresWallet: true
       },
-      { status: 501 }
+      { status: 200 }
     )
 
   } catch (error) {
