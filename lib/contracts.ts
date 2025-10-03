@@ -341,25 +341,45 @@ export async function claimRewards(account: { address: string }, coachId: number
 
 export async function getCoach(coachId: number): Promise<Coach | null> {
   try {
+    console.log(`=== getCoach called for ID: ${coachId} ===`)
+    
     if (!CONTRACT_MODULE.split('::')[0]) {
       console.warn('Contract address not set')
       return null
     }
+
+    console.log('Contract address:', CONTRACT_MODULE.split('::')[0])
+    console.log('Contract module:', CONTRACT_MODULE)
 
     const resource = await aptosClient.getAccountResource({
       accountAddress: CONTRACT_MODULE.split('::')[0],
       resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
     })
 
-    if (!resource || !resource.data) {
+    console.log('Resource response:', resource)
+
+    // В Next.js 15 resource.data может быть undefined, но сам resource содержит данные
+    const resourceData = resource?.data || resource
+    if (!resource || !resourceData) {
       console.warn('Contract not initialized or resource not found')
       return null
     }
 
     // Get the coaches table handle
-    const coachesHandle = resource.data.coaches.handle
+    const coachesHandle = resourceData.coaches.handle
+    console.log('Coaches table handle:', coachesHandle)
+    console.log('Next coach ID:', resourceData.next_coach_id)
+    console.log('Leaderboard length:', resourceData.leaderboard_length)
+    
+    // Проверяем, что запрашиваемый ID существует
+    const nextCoachId = parseInt(resourceData.next_coach_id as string)
+    if (coachId >= nextCoachId) {
+      console.log(`Coach ${coachId} does not exist (next_coach_id: ${nextCoachId})`)
+      return null
+    }
     
     // Get the specific coach from the table
+    console.log(`Fetching coach ${coachId} from table...`)
     const coachData = await aptosClient.getTableItem({
       handle: coachesHandle,
       data: {
@@ -369,14 +389,39 @@ export async function getCoach(coachId: number): Promise<Coach | null> {
       },
     })
     
+    console.log(`Coach ${coachId} raw data:`, coachData)
+    console.log(`Coach ${coachId} raw data type:`, typeof coachData)
+    console.log(`Coach ${coachId} raw data keys:`, coachData ? Object.keys(coachData) : 'null')
+    
     if (!coachData) {
+      console.log(`Coach ${coachId} not found in table`)
       return null
     }
 
-    return {
+    // Decode rules from hex string or Uint8Array
+    let rulesText = ''
+    try {
+      if (typeof (coachData as any).rules === 'string' && (coachData as any).rules.startsWith('0x')) {
+        // Remove 0x prefix and convert hex to bytes
+        const hexString = (coachData as any).rules.slice(2)
+        const bytes = new Uint8Array(hexString.length / 2)
+        for (let i = 0; i < hexString.length; i += 2) {
+          bytes[i / 2] = parseInt(hexString.substr(i, 2), 16)
+        }
+        rulesText = new TextDecoder().decode(bytes)
+      } else if ((coachData as any).rules) {
+        // If it's already a Uint8Array
+        rulesText = new TextDecoder().decode(new Uint8Array((coachData as any).rules))
+      }
+    } catch (error) {
+      console.warn(`Error decoding rules for coach ${coachId}:`, error)
+      rulesText = 'Error decoding rules'
+    }
+
+    const coach = {
       id: (coachData as any).id || 0,
       owner: (coachData as any).owner || '',
-      rules: (coachData as any).rules ? new TextDecoder().decode(new Uint8Array((coachData as any).rules)) : '',
+      rules: rulesText,
       staked_amount: (coachData as any).staked_amount || 0,
       performance_score: (coachData as any).performance_score || 0,
       active: (coachData as any).active || false,
@@ -385,6 +430,9 @@ export async function getCoach(coachId: number): Promise<Coach | null> {
       total_rewards_claimed: (coachData as any).total_rewards_claimed || 0,
       risk_adjusted_return: (coachData as any).risk_adjusted_return || 0,
     }
+
+    console.log(`Processed coach ${coachId}:`, coach)
+    return coach
   } catch (error) {
     console.error('Error fetching coach:', error)
     return null
@@ -1433,6 +1481,7 @@ export async function getAllCoaches(): Promise<Coach[]> {
     })
 
     console.log('Resource response:', resource)
+    console.log('Resource data:', resource?.data)
 
     const resourceData = resource?.data || resource
     if (!resource || !resourceData) {
@@ -1469,6 +1518,8 @@ export async function getAllCoaches(): Promise<Coach[]> {
         })
         
         console.log(`Coach ${coachId} data:`, coach)
+        console.log(`Coach ${coachId} ID field:`, (coach as any)?.id)
+        console.log(`Coach ${coachId} ID type:`, typeof (coach as any)?.id)
         
         if (coach) {
           // Decode rules from hex string
@@ -1504,6 +1555,7 @@ export async function getAllCoaches(): Promise<Coach[]> {
             risk_adjusted_return: (coach as any).risk_adjusted_return || 0,
           }
           console.log(`Processed coach ${coachId}:`, coachData)
+          console.log(`Coach ${coachId} final ID:`, coachData.id, 'type:', typeof coachData.id)
           allCoaches.push(coachData)
         } else {
           console.log(`Coach ${coachId} not found`)
