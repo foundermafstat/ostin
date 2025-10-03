@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server'
-import { getLeaderboard, getAllCoaches } from '@/lib/contracts'
+import { getAllCoaches } from '@/lib/contracts'
 
 export async function GET() {
   try {
     console.log('=== LEADERBOARD API CALLED ===')
     
-    // Try both methods to see which one works
-    const leaderboard = await getLeaderboard()
-    console.log('getLeaderboard result:', leaderboard)
-    
+    // Get all coaches directly
     const allCoaches = await getAllCoaches()
     console.log('getAllCoaches result:', allCoaches)
     
@@ -20,11 +17,8 @@ export async function GET() {
       staked_amount: coach.staked_amount,
     }))
     
-    // Use coaches if leaderboard is empty
-    const result = leaderboard.length > 0 ? leaderboard : coachesAsLeaderboard
-    
-    console.log('Final result:', result)
-    return NextResponse.json(result)
+    console.log('Final result:', coachesAsLeaderboard)
+    return NextResponse.json(coachesAsLeaderboard)
   } catch (error) {
     console.error('Error fetching leaderboard:', error)
     return NextResponse.json(

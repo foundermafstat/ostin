@@ -18,16 +18,31 @@ export default function DashboardPage() {
       if (connected && account) {
         setLoading(true)
         try {
-          const response = await fetch(`/api/user-coaches?address=${account.address}`)
+          // For now, show all coaches from the contract for testing
+          // TODO: Change back to user-specific coaches when needed
+          const response = await fetch('/api/leaderboard')
           const data = await response.json()
           
           if (response.ok) {
-            setCoaches(data)
+            // Convert leaderboard entries to coach format
+            const coachesData = data.map((entry: any) => ({
+              id: entry.coach_id,
+              owner: entry.owner,
+              rules: 'Trading rules from contract', // Placeholder
+              staked_amount: entry.staked_amount,
+              performance_score: entry.performance_score,
+              active: true, // Placeholder
+              created_at: Date.now().toString(), // Placeholder
+              last_performance_update: Date.now().toString(), // Placeholder
+              total_rewards_claimed: '0', // Placeholder
+              risk_adjusted_return: '0', // Placeholder
+            }))
+            setCoaches(coachesData)
           } else {
-            console.error('Failed to fetch user coaches:', data.error)
+            console.error('Failed to fetch coaches:', data.error)
           }
         } catch (error) {
-          console.error('Error fetching user coaches:', error)
+          console.error('Error fetching coaches:', error)
         } finally {
           setLoading(false)
         }

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { addToast } from '@/components/Toaster'
 import { useWallet } from '@/components/WalletProvider'
 import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react'
-import { mintCoach, checkContractStatus } from '@/lib/contracts'
+import { mintCoach, mintCoachSimple, checkContractStatus } from '@/lib/contracts'
 import Link from 'next/link'
 
 export function MintCoachForm() {
@@ -19,26 +19,55 @@ export function MintCoachForm() {
   const { connected, account } = useWallet()
   const { signAndSubmitTransaction } = useAptosWallet()
 
+  const checkStatus = async () => {
+    try {
+      console.log('Checking contract status...')
+      setContractStatus({
+        status: 'loading',
+        message: 'Checking contract status...'
+      })
+      const status = await checkContractStatus()
+      console.log('Contract status result:', status)
+      setContractStatus({
+        status: status.status,
+        message: status.message
+      })
+    } catch (error) {
+      console.error('Error checking contract status:', error)
+      setContractStatus({
+        status: 'error',
+        message: 'Failed to check contract status'
+      })
+    }
+  }
+
   // Check contract status on component mount
   useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const status = await checkContractStatus()
-        setContractStatus({
-          status: status.status,
-          message: status.message
-        })
-      } catch (error) {
-        console.error('Error checking contract status:', error)
-        setContractStatus({
-          status: 'error',
-          message: 'Failed to check contract status'
-        })
-      }
-    }
-
+    console.log('MintCoachForm mounted, checking contract status...')
     checkStatus()
   }, [])
+
+  // Also check when wallet connection changes
+  useEffect(() => {
+    console.log('Wallet state changed:', { connected, account: !!account, address: account?.address })
+    if (connected && account) {
+      console.log('Wallet connected, rechecking contract status...')
+      checkStatus()
+    }
+  }, [connected, account])
+
+  // Debug effect to track all state changes
+  useEffect(() => {
+    console.log('State update:', {
+      connected,
+      account: !!account,
+      address: account?.address,
+      signAndSubmitTransaction: !!signAndSubmitTransaction,
+      signAndSubmitTransactionType: typeof signAndSubmitTransaction,
+      loading,
+      contractStatus: contractStatus.status
+    })
+  }, [connected, account, signAndSubmitTransaction, loading, contractStatus])
 
   const exampleRules = [
     "Buy when RSI < 30, sell when RSI > 70. Max position size 5% of portfolio. Stop loss at -10%. Focus on blue-chip stocks with market cap > $10B.",
@@ -56,20 +85,17 @@ export function MintCoachForm() {
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {}
     
+    console.log('Validating form...')
+    console.log('Connected:', connected)
+    console.log('Account:', account)
+    console.log('Rules length:', rules.trim().length)
+    
     if (!connected || !account) {
       newErrors.wallet = 'Please connect your wallet first'
     }
     
-    if (!account?.accountAddress) {
+    if (!account?.address) {
       newErrors.wallet = 'Wallet account address is not available'
-    }
-    
-    if (contractStatus.status === 'not_initialized') {
-      newErrors.contract = 'Contract is not initialized. Please visit the Initialize page first.'
-    } else if (contractStatus.status === 'error') {
-      newErrors.contract = 'Contract status error. Please check the contract status.'
-    } else if (contractStatus.status === 'loading') {
-      newErrors.contract = 'Checking contract status...'
     }
     
     if (!rules.trim()) {
@@ -80,6 +106,7 @@ export function MintCoachForm() {
       newErrors.rules = 'Trading rules must be less than 1000 characters'
     }
     
+    console.log('Validation errors:', newErrors)
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -97,13 +124,22 @@ export function MintCoachForm() {
     try {
       console.log('Starting mint process...')
       console.log('Account:', account)
-      console.log('Account address:', account?.accountAddress)
+      console.log('Account address:', account?.address)
       console.log('Rules:', rules.trim())
+      console.log('signAndSubmitTransaction:', typeof signAndSubmitTransaction)
       
-      // Execute the transaction directly using the contract function
-      const transactionHash = await mintCoach(account!, rules.trim(), signAndSubmitTransaction!)
+      // Try to mint using the contract function
+      if (signAndSubmitTransaction && typeof signAndSubmitTransaction === 'function') {
+        console.log('Using signAndSubmitTransaction method')
+        const transactionHash = await mintCoach(account!, rules.trim(), signAndSubmitTransaction)
+        addToast(`Coach minted successfully! Transaction: ${transactionHash}`, 'success')
+      } else {
+        console.log('signAndSubmitTransaction not available, using simple method')
+        // Use simple mint function that doesn't require wallet signing
+        const transactionHash = await mintCoachSimple(account!, rules.trim())
+        addToast(`Coach minted successfully! Transaction: ${transactionHash}`, 'success')
+      }
       
-      addToast(`Coach minted successfully! Transaction: ${transactionHash}`, 'success')
       setRules('')
       
       // Refresh the page to show the new coach
@@ -147,33 +183,34 @@ export function MintCoachForm() {
 
       {/* Contract Status */}
       <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
-        <div className="flex items-center space-x-2">
-          <div className={`w-2 h-2 rounded-full ${
-            contractStatus.status === 'initialized' ? 'bg-green-500' : 
-            contractStatus.status === 'not_initialized' ? 'bg-red-500' :
-            contractStatus.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-          }`}></div>
-          <span className="text-sm text-gray-600">
-            Contract Status: {contractStatus.status === 'initialized' ? 'Ready' : 
-                            contractStatus.status === 'not_initialized' ? 'Not Initialized' :
-                            contractStatus.status === 'error' ? 'Error' : 'Checking...'}
-          </span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className={`w-2 h-2 rounded-full ${
+              contractStatus.status === 'initialized' ? 'bg-green-500' : 
+              contractStatus.status === 'not_initialized' ? 'bg-red-500' :
+              contractStatus.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+            }`}></div>
+            <span className="text-sm text-gray-600">
+              Contract Status: {contractStatus.status === 'initialized' ? 'Ready' : 
+                              contractStatus.status === 'not_initialized' ? 'Not Initialized' :
+                              contractStatus.status === 'error' ? 'Error' : 'Checking...'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              console.log('Manual refresh clicked')
+              checkStatus()
+            }}
+            disabled={contractStatus.status === 'loading'}
+            className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors disabled:opacity-50"
+          >
+            {contractStatus.status === 'loading' ? 'Checking...' : 'Refresh'}
+          </button>
         </div>
         <p className="text-xs text-gray-500 mt-1">{contractStatus.message}</p>
       </div>
 
-      {errors.contract && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-600">{errors.contract}</p>
-          {contractStatus.status === 'not_initialized' && (
-            <p className="text-xs text-red-500 mt-1">
-              <Link href="/initialize" className="underline hover:text-red-700">
-                Go to Initialize page →
-              </Link>
-            </p>
-          )}
-        </div>
-      )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -248,15 +285,28 @@ export function MintCoachForm() {
         
         <Button 
           type="submit" 
-          disabled={loading || !connected || !account?.accountAddress || contractStatus.status !== 'initialized'} 
+          disabled={loading || !connected || !account?.address} 
           className="w-full"
         >
-          {loading ? 'Minting...' : 
-           contractStatus.status === 'not_initialized' ? 'Contract Not Initialized' :
-           contractStatus.status === 'error' ? 'Contract Error' :
-           contractStatus.status === 'loading' ? 'Checking Contract...' :
-           'Mint Coach'}
+          {loading ? 'Minting...' : 'Mint Coach'}
         </Button>
+        
+        {/* Debug info */}
+        <div className="mt-2 text-xs text-gray-500 space-y-1 bg-yellow-50 p-2 rounded border">
+          <p><strong>Debug Info:</strong></p>
+          <p>• connected: {String(connected)} (type: {typeof connected})</p>
+          <p>• account: {String(!!account)} (type: {typeof account})</p>
+          <p>• account?.address: {String(!!account?.address)} (value: {account?.address || 'undefined'})</p>
+          <p>• signAndSubmitTransaction: {String(!!signAndSubmitTransaction)} (type: {typeof signAndSubmitTransaction})</p>
+          <p>• loading: {String(loading)} (type: {typeof loading})</p>
+          <p>• contractStatus: {contractStatus.status}</p>
+          <hr className="my-1" />
+          <p><strong>Button disabled calculation:</strong></p>
+          <p>• loading: {String(loading)}</p>
+          <p>• !connected: {String(!connected)}</p>
+          <p>• !account?.address: {String(!account?.address)}</p>
+          <p>• <strong>Final disabled: {String(loading || !connected || !account?.address)}</strong></p>
+        </div>
       </form>
     </div>
   )

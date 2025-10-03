@@ -1,28 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { mintCoach } from '@/lib/contracts'
 
 export async function POST(request: NextRequest) {
   try {
-    const { rules } = await request.json()
+    const { account, rules } = await request.json()
     
-    if (!rules) {
+    if (!account) {
       return NextResponse.json(
-        { error: 'Rules are required' },
+        { error: 'Account is required' },
         { status: 400 }
       )
     }
 
-    // Return instructions for client-side transaction signing
-    return NextResponse.json({ 
-      success: true,
-      message: 'Ready to mint coach. Please sign the transaction in your wallet.',
-      requiresWalletSignature: true,
-      functionName: 'mint_coach',
-      functionArguments: [rules]
-    })
-  } catch (error) {
-    console.error('Error preparing mint transaction:', error)
+    if (!rules || typeof rules !== 'string') {
+      return NextResponse.json(
+        { error: 'Rules are required and must be a string' },
+        { status: 400 }
+      )
+    }
+
+    if (rules.length > 1000) {
+      return NextResponse.json(
+        { error: 'Rules must be less than 1000 characters' },
+        { status: 400 }
+      )
+    }
+
+    // For now, we'll return an error since we can't sign transactions on the server
+    // This is just a placeholder for the alternative method
     return NextResponse.json(
-      { error: 'Failed to prepare mint transaction' },
+      { 
+        error: 'Server-side minting not implemented. Please use wallet connection method.',
+        requiresWallet: true
+      },
+      { status: 501 }
+    )
+
+  } catch (error) {
+    console.error('Error in mint API:', error)
+    return NextResponse.json(
+      { error: 'Failed to process mint request' },
       { status: 500 }
     )
   }

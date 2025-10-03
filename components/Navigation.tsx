@@ -30,6 +30,9 @@ export function Navigation() {
             <Link href="/status" className="text-gray-600 hover:text-gray-900">
               Status
             </Link>
+            <Link href="/test-contract" className="text-gray-600 hover:text-gray-900">
+              Test Contract
+            </Link>
             
             {connected && account && (
               <>
