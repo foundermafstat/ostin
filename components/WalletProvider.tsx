@@ -15,6 +15,7 @@ interface WalletContextType {
   disconnect: () => Promise<void>
   showWalletModal: boolean
   setShowWalletModal: (show: boolean) => void
+  signAndSubmitTransaction?: any
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined)
@@ -34,7 +35,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
 }
 
 function WalletContextProvider({ children }: WalletProviderProps) {
-  const { connected, account, wallet, connect, disconnect, balance } = useWalletAdapter()
+  const { connected, account, wallet, connect, disconnect, balance, signAndSubmitTransaction } = useWalletAdapter()
   const [showWalletModal, setShowWalletModal] = useState(false)
 
   return (
@@ -46,7 +47,8 @@ function WalletContextProvider({ children }: WalletProviderProps) {
       connect, 
       disconnect, 
       showWalletModal, 
-      setShowWalletModal 
+      setShowWalletModal,
+      signAndSubmitTransaction
     }}>
       {children}
     </WalletContext.Provider>
@@ -54,7 +56,7 @@ function WalletContextProvider({ children }: WalletProviderProps) {
 }
 
 function useWalletAdapter() {
-  const { connected, account, wallet, connect, disconnect } = useAptosWallet()
+  const { connected, account, wallet, connect, disconnect, signAndSubmitTransaction } = useAptosWallet()
   const [balance, setBalance] = useState<string | null>(null)
 
   // Get balance when wallet connects
@@ -83,6 +85,7 @@ function useWalletAdapter() {
     account: account ? { address: String(account.address || '') } : null,
     wallet: wallet ? { name: wallet.name } : null,
     balance,
+    signAndSubmitTransaction,
     connect: async () => {
       try {
         await connect()

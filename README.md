@@ -375,20 +375,23 @@ This error occurs when the contract is not deployed or not initialized. Follow t
    .\scripts\deploy.ps1
    ```
 
+2. **Initialize the contract** (Windows):
+   ```powershell
+   .\scripts\initialize-contract.ps1
+   ```
+
    Or manually:
    ```bash
    cd move
-   aptos move compile
-   aptos move publish --profile default
-   aptos move run --profile default --function-id <deployed-address>::portfolio_coach::initialize
+   aptos move run --function-id <deployed-address>::portfolio_coach::initialize
    ```
 
-2. **Update environment variables**:
+3. **Update environment variables**:
    ```env
    NEXT_PUBLIC_CONTRACT_ADDRESS="<deployed-address>"
    ```
 
-3. **Restart the development server**:
+4. **Restart the development server**:
    ```bash
    npm run dev
    ```

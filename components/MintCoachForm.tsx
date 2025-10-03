@@ -1,18 +1,44 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { addToast } from '@/components/Toaster'
 import { useWallet } from '@/components/WalletProvider'
 import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react'
-import { mintCoach } from '@/lib/contracts'
+import { mintCoach, checkContractStatus } from '@/lib/contracts'
+import Link from 'next/link'
 
 export function MintCoachForm() {
   const [rules, setRules] = useState('')
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{[key: string]: string}>({})
+  const [contractStatus, setContractStatus] = useState<{
+    status: 'initialized' | 'not_initialized' | 'error' | 'loading'
+    message: string
+  }>({ status: 'loading', message: 'Checking contract status...' })
   const { connected, account } = useWallet()
   const { signAndSubmitTransaction } = useAptosWallet()
+
+  // Check contract status on component mount
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const status = await checkContractStatus()
+        setContractStatus({
+          status: status.status,
+          message: status.message
+        })
+      } catch (error) {
+        console.error('Error checking contract status:', error)
+        setContractStatus({
+          status: 'error',
+          message: 'Failed to check contract status'
+        })
+      }
+    }
+
+    checkStatus()
+  }, [])
 
   const exampleRules = [
     "Buy when RSI < 30, sell when RSI > 70. Max position size 5% of portfolio. Stop loss at -10%. Focus on blue-chip stocks with market cap > $10B.",
@@ -36,6 +62,14 @@ export function MintCoachForm() {
     
     if (!account?.accountAddress) {
       newErrors.wallet = 'Wallet account address is not available'
+    }
+    
+    if (contractStatus.status === 'not_initialized') {
+      newErrors.contract = 'Contract is not initialized. Please visit the Initialize page first.'
+    } else if (contractStatus.status === 'error') {
+      newErrors.contract = 'Contract status error. Please check the contract status.'
+    } else if (contractStatus.status === 'loading') {
+      newErrors.contract = 'Checking contract status...'
     }
     
     if (!rules.trim()) {
@@ -108,6 +142,36 @@ export function MintCoachForm() {
       {errors.wallet && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
           <p className="text-sm text-red-600">{errors.wallet}</p>
+        </div>
+      )}
+
+      {/* Contract Status */}
+      <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
+        <div className="flex items-center space-x-2">
+          <div className={`w-2 h-2 rounded-full ${
+            contractStatus.status === 'initialized' ? 'bg-green-500' : 
+            contractStatus.status === 'not_initialized' ? 'bg-red-500' :
+            contractStatus.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+          }`}></div>
+          <span className="text-sm text-gray-600">
+            Contract Status: {contractStatus.status === 'initialized' ? 'Ready' : 
+                            contractStatus.status === 'not_initialized' ? 'Not Initialized' :
+                            contractStatus.status === 'error' ? 'Error' : 'Checking...'}
+          </span>
+        </div>
+        <p className="text-xs text-gray-500 mt-1">{contractStatus.message}</p>
+      </div>
+
+      {errors.contract && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-sm text-red-600">{errors.contract}</p>
+          {contractStatus.status === 'not_initialized' && (
+            <p className="text-xs text-red-500 mt-1">
+              <Link href="/initialize" className="underline hover:text-red-700">
+                Go to Initialize page →
+              </Link>
+            </p>
+          )}
         </div>
       )}
       
@@ -184,10 +248,14 @@ export function MintCoachForm() {
         
         <Button 
           type="submit" 
-          disabled={loading || !connected || !account?.accountAddress} 
+          disabled={loading || !connected || !account?.accountAddress || contractStatus.status !== 'initialized'} 
           className="w-full"
         >
-          {loading ? 'Minting...' : 'Mint Coach'}
+          {loading ? 'Minting...' : 
+           contractStatus.status === 'not_initialized' ? 'Contract Not Initialized' :
+           contractStatus.status === 'error' ? 'Contract Error' :
+           contractStatus.status === 'loading' ? 'Checking Contract...' :
+           'Mint Coach'}
         </Button>
       </form>
     </div>

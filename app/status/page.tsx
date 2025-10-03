@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getContractStatusReport } from '@/lib/contracts'
+import { Logo } from '@/components/Logo'
 
 export default function StatusPage() {
   const [status, setStatus] = useState<any>(null)
@@ -28,6 +29,7 @@ export default function StatusPage() {
     return (
       <div className="max-w-4xl mx-auto py-12">
         <div className="text-center">
+          <Logo size="lg" className="mx-auto mb-6" />
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading contract status...</p>
         </div>
@@ -38,6 +40,9 @@ export default function StatusPage() {
   if (error) {
     return (
       <div className="max-w-4xl mx-auto py-12">
+        <div className="text-center mb-8">
+          <Logo size="lg" className="mx-auto mb-6" />
+        </div>
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <h1 className="text-xl font-semibold text-red-800 mb-2">Error</h1>
           <p className="text-red-600">{error}</p>
@@ -48,7 +53,10 @@ export default function StatusPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-12">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Contract Status</h1>
+      <div className="text-center mb-8">
+        <Logo size="lg" className="mx-auto mb-6" />
+        <h1 className="text-3xl font-bold text-gray-900">Contract Status</h1>
+      </div>
       
       <div className="space-y-6">
         <div className="bg-white rounded-lg border p-6">

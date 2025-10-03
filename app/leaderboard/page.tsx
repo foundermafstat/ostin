@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { LeaderboardTable } from '@/components/LeaderboardTable'
 import { LeaderboardEntry } from '@/lib/contracts'
+import { Logo } from '@/components/Logo'
 
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
@@ -39,6 +40,7 @@ export default function LeaderboardPage() {
   return (
     <div className="space-y-8">
       <div className="text-center">
+        <Logo size="lg" className="mx-auto mb-6" />
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
           Leaderboard
         </h1>

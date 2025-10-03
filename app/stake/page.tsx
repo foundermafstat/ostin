@@ -6,6 +6,7 @@ import { StakeForm } from '@/components/StakeForm'
 import { Coach } from '@/lib/contracts'
 import { formatAddress } from '@/lib/utils'
 import Link from 'next/link'
+import { Logo } from '@/components/Logo'
 
 export default function StakePage() {
   const { account, connected } = useWallet()
@@ -46,7 +47,10 @@ export default function StakePage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Stake Tokens</h1>
+          <div className="text-center mb-8">
+            <Logo size="lg" className="mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-gray-900">Stake Tokens</h1>
+          </div>
           
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
             <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -73,7 +77,8 @@ export default function StakePage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
+        <div className="text-center mb-8">
+          <Logo size="lg" className="mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Stake Tokens</h1>
           <p className="text-gray-600">
             Stake APT tokens to activate your AI portfolio coaches and make them eligible for rewards.

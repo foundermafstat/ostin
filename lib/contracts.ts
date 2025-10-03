@@ -372,13 +372,32 @@ export async function initializeContract(account: { address: string }, signAndSu
     throw new Error('Account address is not available')
   }
   
-  console.log('Initializing contract with account:', account.address)
+  console.log('Checking contract status with account:', account.address)
   console.log('Contract module:', CONTRACT_MODULE)
-  console.log('signAndSubmitTransaction:', signAndSubmitTransaction)
   console.log('signAndSubmitTransaction type:', typeof signAndSubmitTransaction)
+  console.log('signAndSubmitTransaction:', signAndSubmitTransaction)
   
   try {
-    console.log('Building transaction...')
+    // First, check if contract is already initialized
+    const isInitialized = await isContractInitialized()
+    
+    if (isInitialized) {
+      console.log('Contract is already initialized')
+      return 'Contract is already initialized and ready to use'
+    }
+    
+    // If not initialized, try to initialize it
+    console.log('Contract not initialized, attempting to initialize...')
+    
+    if (!signAndSubmitTransaction) {
+      throw new Error('Wallet signAndSubmitTransaction is required. Please ensure your wallet is properly connected.')
+    }
+    
+    if (typeof signAndSubmitTransaction !== 'function') {
+      throw new Error(`signAndSubmitTransaction must be a function, got ${typeof signAndSubmitTransaction}`)
+    }
+    
+    console.log('Building initialization transaction...')
     const transaction = await aptosClient.transaction.build.simple({
       sender: account.address,
       data: {
@@ -390,28 +409,33 @@ export async function initializeContract(account: { address: string }, signAndSu
     
     console.log('Transaction built successfully:', transaction)
 
-    let committedTransaction;
-    
-    if (signAndSubmitTransaction && typeof signAndSubmitTransaction === 'function') {
-      console.log('Using wallet adapter signAndSubmitTransaction')
-      committedTransaction = await signAndSubmitTransaction(transaction)
-    } else {
-      console.log('Using aptosClient signAndSubmitTransaction with Account object')
-      // Fallback: create Account object for signing
-      const accountObj = new Account({ address: account.address })
-      committedTransaction = await aptosClient.signAndSubmitTransaction({
-        signer: accountObj,
-        transaction,
-      })
-    }
+    console.log('Using wallet adapter signAndSubmitTransaction')
+    const committedTransaction = await signAndSubmitTransaction(transaction)
 
     await aptosClient.waitForTransaction({
       transactionHash: committedTransaction.hash,
     })
 
+    console.log('Contract initialized successfully!')
     return committedTransaction.hash
   } catch (error) {
-    console.error('Error in initializeContract transaction:', error)
+    console.error('Error in initializeContract:', error)
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('Resource not found')) {
+        throw new Error('Contract not found. Please make sure the contract is deployed.')
+      } else if (error.message.includes('insufficient balance')) {
+        throw new Error('Insufficient balance. Please make sure you have enough APT tokens.')
+      } else if (error.message.includes('rejected')) {
+        throw new Error('Transaction was rejected by the user.')
+      } else if (error.message.includes('timeout')) {
+        throw new Error('Transaction timed out. Please try again.')
+      } else if (error.message.includes('already initialized')) {
+        throw new Error('Contract is already initialized and ready to use.')
+      }
+    }
+    
     throw error
   }
 }
@@ -520,7 +544,18 @@ export async function isContractInitialized(): Promise<boolean> {
       resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
     })
 
-    return !!(resource && resource.data)
+    // Check if resource exists and has the expected structure
+    // In newer Aptos SDK, data is directly in resource, not resource.data
+    const resourceData = resource?.data || resource;
+    
+    if (resource && resourceData && typeof resourceData === 'object') {
+      // Check for key fields that indicate initialization
+      return resourceData.hasOwnProperty('next_coach_id') || 
+             resourceData.hasOwnProperty('coaches') ||
+             resourceData.hasOwnProperty('leaderboard')
+    }
+
+    return false
   } catch (error) {
     console.error('Error checking contract initialization:', error)
     return false
@@ -546,8 +581,20 @@ export async function getContractStatus(): Promise<{
       resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
     })
 
+    // Check if resource exists and has the expected structure
+    // In newer Aptos SDK, data is directly in resource, not resource.data
+    const resourceData = resource?.data || resource;
+    let initialized = false
+    
+    if (resource && resourceData && typeof resourceData === 'object') {
+      // Check for key fields that indicate initialization
+      initialized = resourceData.hasOwnProperty('next_coach_id') || 
+                   resourceData.hasOwnProperty('coaches') ||
+                   resourceData.hasOwnProperty('leaderboard')
+    }
+
     return {
-      initialized: !!(resource && resource.data),
+      initialized,
       address: CONTRACT_MODULE.split('::')[0]
     }
   } catch (error) {
@@ -555,6 +602,84 @@ export async function getContractStatus(): Promise<{
     return {
       initialized: false,
       address: CONTRACT_MODULE.split('::')[0],
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+export async function checkContractStatus(): Promise<{
+  status: 'initialized' | 'not_initialized' | 'error'
+  message: string
+  address: string
+  error?: string
+}> {
+  try {
+    console.log('=== checkContractStatus ===')
+    console.log('Contract address:', CONTRACT_MODULE.split('::')[0])
+    console.log('Full module:', CONTRACT_MODULE)
+    
+    // Try to get the PortfolioCoach resource
+    const resource = await aptosClient.getAccountResource({
+      accountAddress: CONTRACT_MODULE.split('::')[0],
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
+    })
+    
+    console.log('Resource response:', resource)
+    console.log('Resource found:', !!resource)
+    console.log('Resource data exists:', !!resource?.data)
+    console.log('Resource data:', resource?.data)
+    
+    // Check if resource exists and has the expected structure
+    // In newer Aptos SDK, data is directly in resource, not resource.data
+    const resourceData = resource?.data || resource;
+    
+    if (resource && resourceData && typeof resourceData === 'object') {
+      // Check for key fields that indicate initialization
+      const hasRequiredFields = resourceData.hasOwnProperty('next_coach_id') || 
+                               resourceData.hasOwnProperty('coaches') ||
+                               resourceData.hasOwnProperty('leaderboard')
+      
+      console.log('Has required fields:', hasRequiredFields)
+      
+      if (hasRequiredFields) {
+        return {
+          status: 'initialized',
+          message: 'Contract is initialized and ready to use',
+          address: CONTRACT_MODULE.split('::')[0]
+        }
+      }
+    }
+    
+    return {
+      status: 'not_initialized',
+      message: 'Contract is not initialized. The contract needs to be initialized by the deployer.',
+      address: CONTRACT_MODULE.split('::')[0]
+    }
+  } catch (error) {
+    console.error('Error checking contract status:', error)
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    
+    // Check if it's a "Resource not found" error
+    if (error instanceof Error && (
+      error.message.includes('Resource not found') ||
+      error.message.includes('not found') ||
+      error.message.includes('404')
+    )) {
+      return {
+        status: 'not_initialized',
+        message: 'Contract is not initialized. The contract needs to be initialized by the deployer.',
+        address: CONTRACT_MODULE.split('::')[0]
+      }
+    }
+    
+    return {
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      address: CONTRACT_MODULE.split('::')[0] || '',
       error: error instanceof Error ? error.message : 'Unknown error'
     }
   }
@@ -615,10 +740,26 @@ export async function getContractHealth(): Promise<{
       resourceType: `${CONTRACT_MODULE}::PortfolioCoach`,
     })
 
-    if (!resource || !resource.data) {
+    // Check if resource exists and has the expected structure
+    // In newer Aptos SDK, data is directly in resource, not resource.data
+    const resourceData = resource?.data || resource;
+    
+    if (!resource || !resourceData || typeof resourceData !== 'object') {
       return {
         status: 'unhealthy',
         message: 'Contract not initialized or resource not found'
+      }
+    }
+
+    // Check for key fields that indicate initialization
+    const hasRequiredFields = resourceData.hasOwnProperty('next_coach_id') || 
+                             resourceData.hasOwnProperty('coaches') ||
+                             resourceData.hasOwnProperty('leaderboard')
+
+    if (!hasRequiredFields) {
+      return {
+        status: 'unhealthy',
+        message: 'Contract not properly initialized'
       }
     }
 
@@ -628,9 +769,9 @@ export async function getContractHealth(): Promise<{
       details: {
         address: CONTRACT_MODULE.split('::')[0],
         module: CONTRACT_MODULE,
-        leaderboardLength: parseInt(resource.data.leaderboard_length as string),
-        totalStaked: resource.data.total_staked,
-        totalRewardsPool: resource.data.total_rewards_pool
+        leaderboardLength: parseInt(resourceData.leaderboard_length as string),
+        totalStaked: resourceData.total_staked,
+        totalRewardsPool: resourceData.total_rewards_pool
       }
     }
   } catch (error) {

@@ -5,6 +5,7 @@ import { useWallet } from './WalletProvider'
 import { Button } from '@/components/ui/Button'
 import { WalletModal } from './WalletModal'
 import { WalletDropdown } from './WalletDropdown'
+import { Logo } from './Logo'
 
 export function Navigation() {
   const { 
@@ -18,8 +19,8 @@ export function Navigation() {
     <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className="text-2xl font-bold text-primary-600">
-            Ostin
+          <Link href="/" className="flex items-center">
+            <Logo size="md" />
           </Link>
           
           <div className="flex items-center space-x-6">

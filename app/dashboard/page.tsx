@@ -6,6 +6,7 @@ import { CoachCard } from '@/components/CoachCard'
 import { MintCoachForm } from '@/components/MintCoachForm'
 import { ContractStatus } from '@/components/ContractStatus'
 import { Coach } from '@/lib/contracts'
+import { Logo } from '@/components/Logo'
 
 export default function DashboardPage() {
   const { connected, account } = useWallet()
@@ -17,7 +18,7 @@ export default function DashboardPage() {
       if (connected && account) {
         setLoading(true)
         try {
-          const response = await fetch(`/api/user-coaches?address=${account.accountAddress}`)
+          const response = await fetch(`/api/user-coaches?address=${account.address}`)
           const data = await response.json()
           
           if (response.ok) {
@@ -39,6 +40,9 @@ export default function DashboardPage() {
   if (!connected) {
     return (
       <div className="text-center py-12">
+        <div className="mb-8">
+          <Logo size="lg" className="mx-auto" />
+        </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
           Connect Your Wallet
         </h1>

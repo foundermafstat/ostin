@@ -1,6 +1,11 @@
+import { Logo } from './Logo'
+
 export function Hero() {
   return (
     <div className="text-center py-16">
+      <div className="mb-8">
+        <Logo size="lg" className="mx-auto" />
+      </div>
       <h1 className="text-5xl font-bold text-gray-900 mb-6">
         Gamified AI Portfolio Coaches
       </h1>
