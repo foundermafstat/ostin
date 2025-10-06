@@ -21,6 +21,65 @@ export interface LeaderboardEntry {
   staked_amount: number
 }
 
+// Event interfaces
+export interface PerformanceUpdatedEvent {
+  coach_id: number
+  score: number
+  explanation_hash: string
+}
+
+export interface CoachMintedEvent {
+  coach_id: number
+  owner: string
+}
+
+export interface TokensStakedEvent {
+  coach_id: number
+  amount: number
+}
+
+export interface RewardsClaimedEvent {
+  coach_id: number
+  amount: number
+  owner: string
+}
+
+// Contract function interfaces
+export interface ContractFunctions {
+  // Entry functions (require transactions)
+  initialize: (account: { address: string }, signAndSubmitTransaction?: any) => Promise<string>
+  mintCoach: (walletAddress: string, rules: string, signAndSubmitTransaction?: any) => Promise<{ hash: string; coachId: number }>
+  stakeTokens: (walletAddress: string, coachId: number, amount: number, signAndSubmitTransaction: any) => Promise<{ hash: string; coachId: number; stakedAmount: number }>
+  updatePerformance: (account: { address: string }, coachId: number, newScore: number, riskAdjustedReturn: number, explanationHash: string, signAndSubmitTransaction: any) => Promise<string>
+  claimRewards: (account: { address: string }, coachId: number, signAndSubmitTransaction: any) => Promise<string>
+  addRewardsPool: (account: { address: string }, amount: number, signAndSubmitTransaction: any) => Promise<string>
+  
+  // View functions (read-only)
+  getCoach: (coachId: number) => Promise<Coach | null>
+  getLeaderboard: () => Promise<LeaderboardEntry[]>
+  getUserCoaches: (userAddress: string) => Promise<Coach[]>
+  getAllCoaches: () => Promise<Coach[]>
+  getAccountBalance: (address: string) => Promise<string>
+  getTotalStaked: () => Promise<string>
+  getTotalRewardsPool: () => Promise<string>
+  getLeaderboardLength: () => Promise<number>
+  
+  // Contract status functions
+  isContractInitialized: () => Promise<boolean>
+  getContractStatus: () => Promise<{ initialized: boolean; address: string; error?: string }>
+  getContractInfo: () => Promise<{ address: string; module: string; initialized: boolean; error?: string }>
+  getContractHealth: () => Promise<{ status: 'healthy' | 'unhealthy' | 'unknown'; message: string; details?: any }>
+  getContractMetrics: () => Promise<{ totalCoaches: number; totalStaked: string; totalRewardsPool: string; leaderboardLength: number; averagePerformance: number }>
+  getContractSummary: () => Promise<{ status: 'healthy' | 'unhealthy' | 'unknown'; message: string; metrics?: any; error?: string }>
+  getContractDiagnostics: () => Promise<{ contractAddress: string; moduleName: string; isInitialized: boolean; healthStatus: 'healthy' | 'unhealthy' | 'unknown'; error?: string; recommendations?: string[] }>
+  getContractStatusReport: () => Promise<{ timestamp: string; contractAddress: string; moduleName: string; isInitialized: boolean; healthStatus: 'healthy' | 'unhealthy' | 'unknown'; error?: string; recommendations?: string[]; metrics?: any }>
+  getContractHealthCheck: () => Promise<{ status: 'healthy' | 'unhealthy' | 'unknown'; message: string; details: any }>
+  getContractStatusSummary: () => Promise<{ timestamp: string; status: 'healthy' | 'unhealthy' | 'unknown'; message: string; contractAddress: string; moduleName: string; isInitialized: boolean; error?: string; recommendations?: string[]; metrics?: any }>
+  getContractStatusOverview: () => Promise<{ timestamp: string; status: 'healthy' | 'unhealthy' | 'unknown'; message: string; contractAddress: string; moduleName: string; isInitialized: boolean; error?: string; recommendations?: string[]; metrics?: any }>
+  checkContractStatus: () => Promise<{ contractAddress: string; isInitialized: boolean; error?: string; details?: any }>
+  debugContract: () => Promise<any>
+}
+
 export async function mintCoach(
   walletAddress: string,
   rules: string,
@@ -408,27 +467,59 @@ export async function updatePerformance(account: { address: string }, coachId: n
   console.log('Contract module:', CONTRACT_MODULE)
 
   try {
-    const transaction = await aptosClient.transaction.build.simple({
-      sender: account.address,
-      data: {
-        function: `${CONTRACT_MODULE}::update_performance` as any,
-        typeArguments: [],
-        functionArguments: [coachId, newScore, riskAdjustedReturn, explanationHashBytes],
-      },
+    console.log('Building update performance transaction...')
+
+    // Build transaction payload in legacy format (same as mintCoach and stakeTokens)
+    const transactionPayload = {
+      function: `${CONTRACT_MODULE}::update_performance` as any,
+      typeArguments: [],
+      functionArguments: [coachId, newScore, riskAdjustedReturn, explanationHashBytes],
+    }
+
+    // Create legacy transaction format
+    const legacyTransaction = {
+      type: 'entry_function_payload',
+      function: transactionPayload.function,
+      type_arguments: transactionPayload.typeArguments,
+      arguments: transactionPayload.functionArguments,
+    }
+
+    console.log('Update performance transaction built successfully:', legacyTransaction)
+
+    // Sign and submit the transaction using window.aptos
+    console.log('Signing and submitting update performance transaction using window.aptos...')
+    
+    let response
+    
+    try {
+      if (typeof window !== 'undefined' && (window as any).aptos) {
+        const windowAptos = (window as any).aptos
+        if (windowAptos.signAndSubmitTransaction) {
+          response = await windowAptos.signAndSubmitTransaction(legacyTransaction)
+          console.log('✅ Update performance transaction submitted successfully!')
+        } else {
+          throw new Error('window.aptos.signAndSubmitTransaction not available')
+        }
+      } else {
+        throw new Error('window.aptos not available')
+      }
+    } catch (windowError) {
+      console.error('❌ Failed with window.aptos for update performance:', windowError)
+      throw new Error('Wallet not available. Please make sure Petra wallet is installed and connected.')
+    }
+    
+    console.log('Update performance transaction response:', response)
+
+    // Wait for transaction confirmation
+    console.log('Waiting for update performance transaction confirmation...')
+    const result = await aptosClient.waitForTransaction({
+      transactionHash: response.hash,
     })
 
-    console.log('Update performance transaction built successfully')
+    console.log('Update performance transaction confirmed:', result)
+    console.log(`Successfully updated performance for coach ${coachId}`)
 
-    const committedTransaction = await signAndSubmitTransaction(transaction)
-
-    console.log('Update performance transaction submitted:', committedTransaction.hash)
-
-    await aptosClient.waitForTransaction({
-      transactionHash: committedTransaction.hash,
-    })
-
-    console.log('Update performance transaction confirmed:', committedTransaction.hash)
-    return committedTransaction.hash
+    return response.hash
   } catch (error) {
     console.error('Error in updatePerformance transaction:', error)
     
@@ -483,27 +574,59 @@ export async function claimRewards(account: { address: string }, coachId: number
   console.log('Contract module:', CONTRACT_MODULE)
 
   try {
-    const transaction = await aptosClient.transaction.build.simple({
-      sender: account.address,
-      data: {
-        function: `${CONTRACT_MODULE}::claim_rewards` as any,
-        typeArguments: [],
-        functionArguments: [coachId],
-      },
+    console.log('Building claim rewards transaction...')
+
+    // Build transaction payload in legacy format (same as mintCoach and stakeTokens)
+    const transactionPayload = {
+      function: `${CONTRACT_MODULE}::claim_rewards` as any,
+      typeArguments: [],
+      functionArguments: [coachId],
+    }
+
+    // Create legacy transaction format
+    const legacyTransaction = {
+      type: 'entry_function_payload',
+      function: transactionPayload.function,
+      type_arguments: transactionPayload.typeArguments,
+      arguments: transactionPayload.functionArguments,
+    }
+
+    console.log('Claim rewards transaction built successfully:', legacyTransaction)
+
+    // Sign and submit the transaction using window.aptos
+    console.log('Signing and submitting claim rewards transaction using window.aptos...')
+    
+    let response
+    
+    try {
+      if (typeof window !== 'undefined' && (window as any).aptos) {
+        const windowAptos = (window as any).aptos
+        if (windowAptos.signAndSubmitTransaction) {
+          response = await windowAptos.signAndSubmitTransaction(legacyTransaction)
+          console.log('✅ Claim rewards transaction submitted successfully!')
+        } else {
+          throw new Error('window.aptos.signAndSubmitTransaction not available')
+        }
+      } else {
+        throw new Error('window.aptos not available')
+      }
+    } catch (windowError) {
+      console.error('❌ Failed with window.aptos for claim rewards:', windowError)
+      throw new Error('Wallet not available. Please make sure Petra wallet is installed and connected.')
+    }
+    
+    console.log('Claim rewards transaction response:', response)
+
+    // Wait for transaction confirmation
+    console.log('Waiting for claim rewards transaction confirmation...')
+    const result = await aptosClient.waitForTransaction({
+      transactionHash: response.hash,
     })
 
-    console.log('Claim rewards transaction built successfully')
+    console.log('Claim rewards transaction confirmed:', result)
+    console.log(`Successfully claimed rewards for coach ${coachId}`)
 
-    const committedTransaction = await signAndSubmitTransaction(transaction)
-
-    console.log('Claim rewards transaction submitted:', committedTransaction.hash)
-
-    await aptosClient.waitForTransaction({
-      transactionHash: committedTransaction.hash,
-    })
-
-    console.log('Claim rewards transaction confirmed:', committedTransaction.hash)
-    return committedTransaction.hash
+    return response.hash
   } catch (error) {
     console.error('Error in claimRewards transaction:', error)
     
@@ -1629,6 +1752,120 @@ export async function debugContract(): Promise<any> {
   }
 }
 
+export async function addRewardsPool(
+  account: { address: string }, 
+  amount: number, 
+  signAndSubmitTransaction: any
+): Promise<string> {
+  // Validate inputs
+  if (!account) {
+    throw new Error('Account is required')
+  }
+  
+  if (!account.address) {
+    throw new Error('Account address is not available')
+  }
+  
+  if (!amount || amount <= 0) {
+    throw new Error('Valid amount is required')
+  }
+
+  // Enhanced validation for signAndSubmitTransaction
+  if (!signAndSubmitTransaction) {
+    throw new Error('Wallet transaction function is not available. Please reconnect your wallet.')
+  }
+  
+  if (typeof signAndSubmitTransaction !== 'function') {
+    throw new Error('Wallet transaction function is invalid. Please reconnect your wallet.')
+  }
+
+  console.log('=== ADDING REWARDS TO POOL ===')
+  console.log('Amount (octas):', amount)
+  console.log('Amount (APT):', amount / 100000000)
+  console.log('Account address:', account.address)
+  console.log('Contract module:', CONTRACT_MODULE)
+  console.log('Contract address:', CONTRACT_MODULE.split('::')[0])
+
+  try {
+    console.log('Building add rewards pool transaction...')
+
+    // Build transaction payload in legacy format
+    const transactionPayload = {
+      function: `${CONTRACT_MODULE}::add_rewards_pool` as any,
+      typeArguments: [],
+      functionArguments: [amount],
+    }
+
+    // Create legacy transaction format
+    const legacyTransaction = {
+      type: 'entry_function_payload',
+      function: transactionPayload.function,
+      type_arguments: transactionPayload.typeArguments,
+      arguments: transactionPayload.functionArguments,
+    }
+
+    console.log('Add rewards pool transaction built successfully:', legacyTransaction)
+
+    // Sign and submit the transaction using window.aptos
+    console.log('Signing and submitting add rewards pool transaction using window.aptos...')
+    
+    let response
+    
+    try {
+      if (typeof window !== 'undefined' && (window as any).aptos) {
+        const windowAptos = (window as any).aptos
+        if (windowAptos.signAndSubmitTransaction) {
+          response = await windowAptos.signAndSubmitTransaction(legacyTransaction)
+          console.log('✅ Add rewards pool transaction submitted successfully!')
+        } else {
+          throw new Error('window.aptos.signAndSubmitTransaction not available')
+        }
+      } else {
+        throw new Error('window.aptos not available')
+      }
+    } catch (windowError) {
+      console.error('❌ Failed with window.aptos for add rewards pool:', windowError)
+      throw new Error('Wallet not available. Please make sure Petra wallet is installed and connected.')
+    }
+    
+    console.log('Add rewards pool transaction response:', response)
+
+    // Wait for transaction confirmation
+    console.log('Waiting for add rewards pool transaction confirmation...')
+    const result = await aptosClient.waitForTransaction({
+      transactionHash: response.hash,
+    })
+
+    console.log('Add rewards pool transaction confirmed:', result)
+    console.log(`Successfully added ${amount / 100000000} APT to rewards pool`)
+
+    return response.hash
+  } catch (error) {
+    console.error('Error in addRewardsPool transaction:', error)
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('Resource not found')) {
+        throw new Error('Contract not found. Please make sure the contract is deployed and initialized.')
+      } else if (error.message.includes('insufficient balance')) {
+        throw new Error('Insufficient balance. Please make sure you have enough APT tokens.')
+      } else if (error.message.includes('rejected')) {
+        throw new Error('Transaction was rejected by the user.')
+      } else if (error.message.includes('timeout')) {
+        throw new Error('Transaction timed out. Please try again.')
+      } else if (error.message.includes('E_UNAUTHORIZED')) {
+        throw new Error('You are not authorized to add rewards to the pool. Only contract owner can do this.')
+      } else if (error.message.includes('E_INVALID_AMOUNT')) {
+        throw new Error('Invalid amount.')
+      } else if (error.message.includes('E_CONTRACT_NOT_INITIALIZED')) {
+        throw new Error('Contract is not initialized. Please initialize the contract first.')
+      }
+    }
+    
+    throw error
+  }
+}
+
 export async function getAllCoaches(): Promise<Coach[]> {
   try {
     console.log('=== getAllCoaches called ===')
@@ -1740,3 +1977,87 @@ export async function getAllCoaches(): Promise<Coach[]> {
     return []
   }
 }
+
+// Export all contract functions as a single object for easy access
+export const contractAPI = {
+  // Entry functions (require transactions)
+  initialize: initializeContract,
+  mintCoach,
+  stakeTokens,
+  updatePerformance,
+  claimRewards,
+  addRewardsPool,
+  
+  // View functions (read-only)
+  getCoach,
+  getLeaderboard,
+  getUserCoaches,
+  getAllCoaches,
+  getAccountBalance,
+  getTotalStaked,
+  getTotalRewardsPool,
+  getLeaderboardLength,
+  
+  // Contract status functions
+  isContractInitialized,
+  getContractStatus,
+  getContractInfo,
+  getContractHealth,
+  getContractMetrics,
+  getContractSummary,
+  getContractDiagnostics,
+  getContractStatusReport,
+  getContractHealthCheck,
+  getContractStatusSummary,
+  getContractStatusOverview,
+  checkContractStatus,
+  debugContract,
+} as const
+
+// All types are already exported above as interfaces
+
+/**
+ * Portfolio Coach Contract API
+ * 
+ * This module provides a complete interface to the Portfolio Coach smart contract on Aptos.
+ * 
+ * ## Entry Functions (require transactions and wallet connection):
+ * - `initialize()` - Initialize the contract (admin only)
+ * - `mintCoach()` - Create a new trading coach
+ * - `stakeTokens()` - Stake APT tokens to activate a coach
+ * - `updatePerformance()` - Update coach performance metrics
+ * - `claimRewards()` - Claim rewards based on performance
+ * - `addRewardsPool()` - Add rewards to the pool (admin only)
+ * 
+ * ## View Functions (read-only):
+ * - `getCoach()` - Get specific coach data
+ * - `getLeaderboard()` - Get sorted leaderboard
+ * - `getUserCoaches()` - Get user's coaches
+ * - `getAllCoaches()` - Get all coaches
+ * - `getAccountBalance()` - Get APT balance
+ * - `getTotalStaked()` - Get total staked amount
+ * - `getTotalRewardsPool()` - Get total rewards pool
+ * - `getLeaderboardLength()` - Get leaderboard length
+ * 
+ * ## Contract Status Functions:
+ * - `isContractInitialized()` - Check if contract is initialized
+ * - `getContractStatus()` - Get basic contract status
+ * - `getContractHealth()` - Get detailed health status
+ * - `getContractMetrics()` - Get contract metrics
+ * - `debugContract()` - Debug contract state
+ * 
+ * ## Usage Examples:
+ * 
+ * ```typescript
+ * import { contractAPI } from './lib/contracts'
+ * 
+ * // Mint a new coach
+ * const result = await contractAPI.mintCoach(walletAddress, "My trading rules", signAndSubmitTransaction)
+ * 
+ * // Get all coaches
+ * const coaches = await contractAPI.getAllCoaches()
+ * 
+ * // Check contract status
+ * const status = await contractAPI.getContractHealth()
+ * ```
+ */
