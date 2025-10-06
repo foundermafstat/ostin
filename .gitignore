@@ -127,3 +127,4 @@ aptos-core/
 
 # Prisma
 prisma/migrations/
+.vercel
