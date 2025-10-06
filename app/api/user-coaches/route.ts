@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
     const coaches = await getUserCoaches(userAddress)
     
     console.log('User coaches:', coaches)
+    console.log('User coaches length:', coaches.length)
+    console.log('User coaches type:', typeof coaches)
     
     return NextResponse.json(coaches)
   } catch (error) {

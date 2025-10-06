@@ -2,44 +2,28 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+@theme {
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #7dd3fc;
+  --color-primary-400: #38bdf8;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+  --color-primary-800: #075985;
+  --color-primary-900: #0c4a6e;
+  
+  --color-secondary-50: #f8fafc;
+  --color-secondary-100: #f1f5f9;
+  --color-secondary-200: #e2e8f0;
+  --color-secondary-300: #cbd5e1;
+  --color-secondary-400: #94a3b8;
+  --color-secondary-500: #64748b;
+  --color-secondary-600: #475569;
+  --color-secondary-700: #334155;
+  --color-secondary-800: #1e293b;
+  --color-secondary-900: #0f172a;
 }
 
 /* Accessible focus styles */
@@ -102,45 +86,71 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Глубокий темно-синий фон */
+  --background: oklch(0.20 0.05 265);
+  --foreground: oklch(0.95 0.02 240);
+  
+  /* Карточки - немного светлее фона */
+  --card: oklch(0.12 0.05 240);
+  --card-foreground: oklch(0.95 0.02 240);
+  
+  /* Поповеры */
+  --popover: oklch(0.12 0.05 240);
+  --popover-foreground: oklch(0.95 0.02 240);
+  
+  /* Акцентные цвета */
+  --primary: oklch(0.7 0.15 220);
+  --primary-foreground: oklch(0.95 0.02 240);
+  
+  /* Вторичные элементы */
+  --secondary: oklch(0.15 0.05 240);
+  --secondary-foreground: oklch(0.9 0.02 240);
+  
+  /* Приглушенные элементы */
+  --muted: oklch(0.15 0.05 240);
+  --muted-foreground: oklch(0.7 0.02 240);
+  
+  /* Акцентные элементы */
+  --accent: oklch(0.15 0.05 240);
+  --accent-foreground: oklch(0.95 0.02 240);
+  
+  /* Деструктивные действия */
+  --destructive: oklch(0.6 0.2 10);
+  --destructive-foreground: oklch(0.95 0.02 240);
+  
+  /* Границы и элементы ввода */
+  --border: oklch(0.2 0.05 265);
+  --input: oklch(0.12 0.05 240);
+  --ring: oklch(0.7 0.15 220);
+  
+  /* Графики */
+  --chart-1: oklch(0.7 0.15 220);
+  --chart-2: oklch(0.65 0.15 160);
+  --chart-3: oklch(0.6 0.15 100);
+  --chart-4: oklch(0.55 0.15 40);
+  --chart-5: oklch(0.5 0.15 320);
+  
+  /* Боковая панель */
+  --sidebar: oklch(0.1 0.05 240);
+  --sidebar-foreground: oklch(0.95 0.02 240);
+  --sidebar-primary: oklch(0.7 0.15 220);
+  --sidebar-primary-foreground: oklch(0.95 0.02 240);
+  --sidebar-accent: oklch(0.15 0.05 240);
+  --sidebar-accent-foreground: oklch(0.95 0.02 240);
+  --sidebar-border: oklch(0.2 0.05 240);
+  --sidebar-ring: oklch(0.7 0.15 220);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-gray-200 dark:border-blue-800;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white text-gray-900 transition-colors duration-200;
+  }
+  
+  .dark body {
+    @apply bg-slate-900 text-blue-50;
   }
   /* Add consistent rounded corners to common components */
   .rounded-card {
@@ -181,9 +191,166 @@
       max-width: 1280px;
     }
   }
-  @screen 2xl {
-    .container {
-      max-width: 1440px;
-    }
-  }
+   @screen 2xl {
+     .container {
+       max-width: 1440px;
+     }
+   }
+ }
+
+/* Dark theme specific styles */
+.dark {
+  color-scheme: dark;
+}
+
+.dark img {
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+}
+
+.dark img:hover {
+  opacity: 1;
+}
+
+/* Smooth theme transitions */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+
+
+
+/* Дополнительное исключение для всех контейнеров */
+
+
+/* Dark theme specific overrides */
+.dark {
+  /* Основной фон */
+  background: oklch(0.08 0.05 240);
+  color: oklch(0.95 0.02 240);
+}
+
+.dark .bg-white {
+  background: oklch(0.12 0.05 240) !important;
+  border-color: oklch(0.2 0.05 240);
+}
+
+.dark .bg-gray-100,
+.dark .bg-gray-50,
+.dark .bg-slate-100,
+.dark .bg-slate-50 {
+  background: oklch(0.15 0.05 240) !important;
+}
+
+.dark .bg-gray-200 {
+  background: oklch(0.18 0.05 240) !important;
+}
+
+.dark .text-gray-900 {
+  color: oklch(0.95 0.02 240) !important;
+}
+
+.dark .text-gray-800 {
+  color: oklch(0.9 0.02 240) !important;
+}
+
+.dark .text-gray-700 {
+  color: oklch(0.85 0.02 240) !important;
+}
+
+.dark .text-gray-600 {
+  color: oklch(0.7 0.02 240) !important;
+}
+
+.dark .text-gray-500 {
+  color: oklch(0.6 0.02 240) !important;
+}
+
+.dark .text-gray-400 {
+  color: oklch(0.5 0.02 240) !important;
+}
+
+/* Таблицы */
+.dark table {
+  background: oklch(0.12 0.05 240);
+  border-color: oklch(0.2 0.05 240);
+}
+
+.dark th {
+  background: oklch(0.15 0.05 240);
+  color: oklch(0.95 0.02 240);
+  border-color: oklch(0.2 0.05 240);
+}
+
+.dark td {
+  background: oklch(0.12 0.05 240);
+  color: oklch(0.9 0.02 240);
+  border-color: oklch(0.2 0.05 240);
+}
+
+.dark tr:hover td {
+  background: oklch(0.25 0.05 265) !important;
+}
+
+.dark tr:nth-child(even) td {
+  background: oklch(0.1 0.05 240);
+}
+
+/* Выделенные элементы в таблицах */
+.dark tr.selected td,
+.dark tr[aria-selected="true"] td,
+.dark .selected {
+  background: oklch(0.2 0.1 220) !important;
+  color: oklch(0.95 0.02 240) !important;
+}
+
+/* Карточки и панели */
+.dark .card,
+.dark .panel,
+.dark .bg-white {
+  background: oklch(0.12 0.05 240) !important;
+  border-color: oklch(0.2 0.05 240) !important;
+  color: oklch(0.95 0.02 240) !important;
+}
+
+/* Кнопки */
+.dark button {
+  border-color: oklch(0.2 0.05 240);
+}
+
+.dark .btn-primary {
+  background: oklch(0.7 0.15 220) !important;
+  color: oklch(0.95 0.02 240) !important;
+  border-color: oklch(0.6 0.15 220) !important;
+}
+
+.dark .btn-primary:hover {
+  background: oklch(0.6 0.15 220) !important;
+}
+
+.dark .btn-secondary {
+  background: oklch(0.15 0.05 240) !important;
+  color: oklch(0.9 0.02 240) !important;
+  border-color: oklch(0.2 0.05 240) !important;
+}
+
+.dark .btn-secondary:hover {
+  background: oklch(0.25 0.05 265) !important;
+}
+
+
+/* Поля ввода */
+.dark input,
+.dark textarea,
+.dark select {
+  background: oklch(0.12 0.05 240) !important;
+  border-color: oklch(0.2 0.05 240) !important;
+  color: oklch(0.95 0.02 240) !important;
+}
+
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  border-color: oklch(0.7 0.15 220) !important;
+  box-shadow: 0 0 0 2px oklch(0.7 0.15 220 / 0.2) !important;
 }

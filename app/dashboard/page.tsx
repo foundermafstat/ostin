@@ -4,7 +4,6 @@ import { useWallet } from '@/components/WalletProvider'
 import { useEffect, useState } from 'react'
 import { CoachCard } from '@/components/CoachCard'
 import { MintCoachForm } from '@/components/MintCoachForm'
-import { TestWallet } from '@/components/TestWallet'
 import { Coach, getUserCoaches, getAllCoaches } from '@/lib/contracts'
 import { Logo } from '@/components/Logo'
 import { Toaster } from '@/components/Toaster'
@@ -21,21 +20,12 @@ export default function DashboardPage() {
       try {
         if (connected && account?.address && !showAllCoaches) {
           // Try to get user's coaches first
-          console.log('Fetching user coaches from contract...', account.address)
-          const userCoaches = await getUserCoaches(account.address)
+          console.log('Fetching user coaches from contract...', account.address.toString())
+          const userCoaches = await getUserCoaches(account.address.toString())
           console.log('User coaches received:', userCoaches)
-          
-          if (userCoaches.length > 0) {
-            setCoaches(userCoaches)
-          } else {
-            // If user has no coaches, show all coaches
-            console.log('User has no coaches, fetching all coaches...')
-            const allCoaches = await getAllCoaches()
-            console.log('All coaches received:', allCoaches)
-            setCoaches(allCoaches)
-            setShowAllCoaches(true)
-          }
-        } else {
+          console.log('User coaches length:', userCoaches.length)
+          setCoaches(userCoaches)
+        } else if (showAllCoaches) {
           // Show all coaches
           console.log('Fetching all coaches from contract...')
           const allCoaches = await getAllCoaches()
@@ -78,8 +68,6 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6">
-        <TestWallet />
-        
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">

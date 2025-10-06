@@ -93,7 +93,7 @@ export function CoachCard({ coach }: CoachCardProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg border p-6 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-lg border p-6 hover:shadow-md transition-shadow no-hover">
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-lg font-semibold">Coach #{coach.id}</h3>

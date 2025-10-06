@@ -65,7 +65,7 @@ export function TestWallet() {
   }
 
   return (
-    <div className="bg-white rounded-lg border p-6 space-y-4">
+    <div className="bg-white rounded-lg border p-6 space-y-4 no-hover">
       <h3 className="text-lg font-semibold">Wallet Test Panel</h3>
       
       <div className="space-y-2">

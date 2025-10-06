@@ -859,6 +859,8 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
 
 export async function getUserCoaches(userAddress: string): Promise<Coach[]> {
   try {
+    console.log('🚀🚀🚀 getUserCoaches UPDATED VERSION CALLED 🚀🚀🚀')
+    
     if (!CONTRACT_MODULE.split('::')[0]) {
       console.warn('Contract address not set')
       return []
@@ -873,28 +875,91 @@ export async function getUserCoaches(userAddress: string): Promise<Coach[]> {
     })
 
     console.log('User coaches resource:', userCoachesResource)
+    console.log('User coaches resource data:', userCoachesResource?.data)
+    console.log('User coaches resource type:', typeof userCoachesResource)
+    console.log('User coaches resource keys:', userCoachesResource ? Object.keys(userCoachesResource) : 'null')
 
-    if (!userCoachesResource || !userCoachesResource.data) {
-      console.warn('User coaches resource not found - user has no coaches yet')
+    if (!userCoachesResource) {
+      console.warn('User coaches resource is null/undefined')
       return []
     }
 
-    const coachIds = userCoachesResource.data.coaches as string[]
+    // Check if data exists directly on resource or in data property
+    const userResourceData = userCoachesResource.data || userCoachesResource
+    console.log('Resource data to use:', userResourceData)
+    console.log('Resource data type:', typeof userResourceData)
+
+    if (!userResourceData || !userResourceData.coaches) {
+      console.warn('User coaches resource not found - user has no coaches yet')
+      console.log('userResourceData:', userResourceData)
+      return []
+    }
+
+    const coachIds = userResourceData.coaches as string[]
     console.log('User coach IDs:', coachIds)
     
-    // Get each coach from the main contract
+    // Get the main contract resource to access coaches table
+    const resource = await aptosClient.getAccountResource({
+      accountAddress: CONTRACT_MODULE.split('::')[0],
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
+    })
+
+    const resourceData = resource?.data || resource
+    if (!resource || !resourceData) {
+      console.warn('Main contract resource not found')
+      return []
+    }
+
+    const coachesTable = resourceData.coaches as any
+    console.log('Coaches table handle:', coachesTable)
+    
+    // Get each coach from the coaches table directly
     const coaches: Coach[] = []
     for (const coachId of coachIds) {
-      const coach = await getCoach(parseInt(coachId))
-      if (coach) {
-        coaches.push(coach)
+      console.log(`Fetching coach with ID: ${coachId} from table...`)
+      try {
+        const coachData = await aptosClient.getTableItem({
+          handle: coachesTable.handle,
+          data: {
+            key_type: 'u64',
+            value_type: `${CONTRACT_MODULE}::Coach`,
+            key: coachId,
+          },
+        })
+        
+        console.log(`Coach ${coachId} raw data:`, coachData)
+        
+        if (coachData) {
+          // Convert raw coach data to Coach object (same logic as in getAllCoaches)
+          const coach: Coach = {
+            id: parseInt(coachId),
+            owner: (coachData as any).owner || '',
+            rules: (coachData as any).rules || '',
+            staked_amount: parseInt((coachData as any).staked_amount || '0'),
+            performance_score: parseInt((coachData as any).performance_score || '0'),
+            active: parseInt((coachData as any).staked_amount || '0') > 0,
+            created_at: parseInt((coachData as any).created_at || Date.now().toString()),
+            last_performance_update: parseInt((coachData as any).last_performance_update || '0'),
+            total_rewards_claimed: parseInt((coachData as any).total_rewards_claimed || '0'),
+            risk_adjusted_return: parseInt((coachData as any).risk_adjusted_return || '0'),
+          }
+          
+          console.log(`Coach ${coachId} processed:`, coach)
+          coaches.push(coach)
+        }
+      } catch (error) {
+        console.error(`Error fetching coach ${coachId}:`, error)
       }
     }
     
     console.log('User coaches found:', coaches.length)
+    console.log('Final coaches array:', coaches)
     return coaches
   } catch (error) {
     console.error('Error fetching user coaches:', error)
+    console.error('Error type:', typeof error)
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error')
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
     
     // Handle resource not found error - user has no coaches yet
     if (error instanceof Error && (
@@ -907,6 +972,7 @@ export async function getUserCoaches(userAddress: string): Promise<Coach[]> {
       return []
     }
     
+    console.warn('Unknown error occurred, returning empty array')
     return []
   }
 }

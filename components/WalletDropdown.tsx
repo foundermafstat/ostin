@@ -66,11 +66,11 @@ export function WalletDropdown() {
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border z-50">
+        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 z-50">
           <div className="p-4">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Wallet Connected</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Wallet Connected</h3>
               <Button
                 onClick={disconnect}
                 variant="outline"

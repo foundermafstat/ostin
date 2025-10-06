@@ -83,7 +83,7 @@ export function LeaderboardPreview() {
   return (
     <div className="space-y-3">
       {leaderboard.map((entry, index) => (
-        <div key={entry.coach_id} className="flex justify-between items-center p-3 bg-white rounded-lg border">
+        <div key={entry.coach_id} className="flex justify-between items-center p-3 bg-white rounded-lg border no-hover">
           <div className="flex items-center space-x-3">
             <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-sm font-semibold text-primary-600">
               {index + 1}

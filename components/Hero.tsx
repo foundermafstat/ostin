@@ -15,7 +15,7 @@ export function Hero() {
       </p>
       
       <div className="grid md:grid-cols-3 gap-8 mt-12">
-        <div className="p-6 bg-white rounded-lg shadow-sm border">
+        <div className="p-6 bg-white rounded-lg shadow-sm border no-hover">
           <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
             <span className="text-2xl">🤖</span>
           </div>
@@ -25,7 +25,7 @@ export function Hero() {
           </p>
         </div>
         
-        <div className="p-6 bg-white rounded-lg shadow-sm border">
+        <div className="p-6 bg-white rounded-lg shadow-sm border no-hover">
           <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
             <span className="text-2xl">💰</span>
           </div>
@@ -35,7 +35,7 @@ export function Hero() {
           </p>
         </div>
         
-        <div className="p-6 bg-white rounded-lg shadow-sm border">
+        <div className="p-6 bg-white rounded-lg shadow-sm border no-hover">
           <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
             <span className="text-2xl">🏆</span>
           </div>

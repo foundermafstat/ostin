@@ -121,27 +121,27 @@ export function MintCoachForm() {
   }
 
   return (
-    <div className="bg-white rounded-lg border p-6">
+    <div className="bg-white rounded-lg border p-6 no-hover">
       <h3 className="text-lg font-semibold mb-4">Mint New Coach</h3>
       
       {/* Wallet Status */}
-      <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
+      <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md">
         <div className="flex items-center space-x-2">
           <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-600 dark:text-gray-300">
             {connected ? 'Wallet Connected' : 'Wallet Not Connected'}
           </span>
         </div>
         {connected && account?.address && (
-          <p className="text-xs text-gray-500 mt-1 font-mono">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
             {account.address.toString().slice(0, 6)}...{account.address.toString().slice(-4)}
           </p>
         )}
       </div>
       
       {errors.wallet && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-600">{errors.wallet}</p>
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md">
+          <p className="text-sm text-red-600 dark:text-red-400">{errors.wallet}</p>
         </div>
       )}
 
@@ -149,7 +149,7 @@ export function MintCoachForm() {
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="rules" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="rules" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Trading Rules & Strategy
           </label>
           <textarea
@@ -162,59 +162,59 @@ export function MintCoachForm() {
               }
             }}
             placeholder="Enter your AI coach's trading rules and strategy..."
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-              errors.rules ? 'border-red-300' : 'border-gray-300'
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 ${
+              errors.rules ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'
             }`}
             rows={4}
             required
           />
           <div className="mt-1 flex justify-between">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Describe the trading strategy, risk management rules, and investment approach for your AI coach.
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 dark:text-gray-500">
               {rules.length}/1000
             </p>
           </div>
           
           {/* Example rules */}
-          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-xs text-blue-800 font-medium mb-2">💡 Quick examples:</p>
+          <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+            <p className="text-xs text-blue-800 dark:text-blue-200 font-medium mb-2">💡 Quick examples:</p>
             <div className="flex flex-wrap gap-2 mb-2">
               <button
                 type="button"
                 onClick={() => fillExample(0)}
-                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
               >
                 Simple Strategy
               </button>
               <button
                 type="button"
                 onClick={() => fillExample(1)}
-                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
               >
                 Advanced Strategy
               </button>
               <button
                 type="button"
                 onClick={() => fillExample(2)}
-                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
               >
                 Conservative Strategy
               </button>
             </div>
-            <p className="text-xs text-blue-600">
+            <p className="text-xs text-blue-600 dark:text-blue-300">
               Click any button above to fill the textarea with example rules
             </p>
           </div>
           {errors.rules && (
-            <p className="text-sm text-red-600 mt-1">{errors.rules}</p>
+            <p className="text-sm text-red-600 dark:text-red-400 mt-1">{errors.rules}</p>
           )}
         </div>
         
         {errors.submit && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-600">{errors.submit}</p>
+          <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md">
+            <p className="text-sm text-red-600 dark:text-red-400">{errors.submit}</p>
           </div>
         )}
         

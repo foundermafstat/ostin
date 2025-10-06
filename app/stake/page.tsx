@@ -23,11 +23,13 @@ export default function StakePage() {
 
       try {
         setError(null)
-        const response = await fetch(`/api/user-coaches?address=${account.accountAddress}`)
+        const response = await fetch(`/api/user-coaches?address=${account.address.toString()}`)
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
         const data = await response.json()
+        console.log('Stake page - user coaches received:', data)
+        console.log('Stake page - user coaches length:', data.length)
         setUserCoaches(data)
       } catch (error) {
         console.error('Error fetching user coaches:', error)

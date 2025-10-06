@@ -41,39 +41,39 @@ export default function LeaderboardPage() {
     <div className="space-y-8">
       <div className="text-center">
         <Logo size="lg" className="mx-auto mb-6" />
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
           Leaderboard
         </h1>
-        <p className="text-xl text-gray-600 mb-6">
+        <p className="text-xl text-gray-600 dark:text-gray-300 mb-6">
           Top performing AI portfolio coaches
         </p>
         
         {!loading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-            <div className="bg-white p-4 rounded-lg shadow-sm border">
-              <div className="text-2xl font-bold text-blue-600">{totalCoaches}</div>
-              <div className="text-sm text-gray-600">Total Coaches</div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 w-full">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-600">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalCoaches}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">Total Coaches</div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm border">
-              <div className="text-2xl font-bold text-green-600">{activeCoaches}</div>
-              <div className="text-sm text-gray-600">Active Coaches</div>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-600">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{activeCoaches}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">Active Coaches</div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm border">
-              <div className="text-2xl font-bold text-purple-600">{scoredCoaches}</div>
-              <div className="text-sm text-gray-600">Scored Coaches</div>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-600">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{scoredCoaches}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">Scored Coaches</div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm border">
-              <div className="text-2xl font-bold text-orange-600">{totalStaked}</div>
-              <div className="text-sm text-gray-600">Total Staked (APT)</div>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-600">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalStaked}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">Total Staked (APT)</div>
             </div>
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-semibold">Performance Rankings</h2>
-          <p className="text-gray-600 mt-1">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-600">
+        <div className="p-6 border-b dark:border-gray-600">
+          <h2 className="text-xl font-semibold dark:text-white">Performance Rankings</h2>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">
             Ranked by performance score and total staked amount
           </p>
         </div>
@@ -83,19 +83,19 @@ export default function LeaderboardPage() {
             <div className="space-y-4">
               {[...Array(10)].map((_, i) => (
                 <div key={i} className="animate-pulse">
-                  <div className="h-16 bg-gray-200 rounded-lg"></div>
+                  <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
                 </div>
               ))}
             </div>
           ) : error ? (
             <div className="text-center py-12">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">⚠️</span>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 Error Loading Leaderboard
               </h3>
-              <p className="text-gray-600 mb-4">{error}</p>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
               <button 
                 onClick={() => window.location.reload()} 
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

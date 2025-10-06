@@ -16,8 +16,8 @@ export function WalletConnect() {
   if (connected && account) {
     return (
       <div className="space-y-4">
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-          <h3 className="font-semibold text-green-800 mb-4">Wallet Connected</h3>
+        <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+          <h3 className="font-semibold text-green-800 dark:text-green-200 mb-4">Wallet Connected</h3>
           <WalletDropdown />
         </div>
       </div>
@@ -32,7 +32,7 @@ export function WalletConnect() {
       >
         Connect Wallet
       </Button>
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
         Connect your Aptos wallet to start using the platform
       </p>
       
