@@ -5,7 +5,6 @@ import { useWallet } from '@/components/WalletProvider'
 import { Button } from '@/components/ui/Button'
 import { Toaster } from '@/components/Toaster'
 import { stakeTokens } from '@/lib/contracts'
-import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react'
 
 interface StakeFormProps {
   coachId: number
@@ -15,8 +14,7 @@ interface StakeFormProps {
 }
 
 export function StakeForm({ coachId, coachOwner, currentStake = 0, onSuccess }: StakeFormProps) {
-  const { account, connected } = useWallet()
-  const { signAndSubmitTransaction } = useAptosWallet()
+  const { account, connected, signAndSubmitTransaction } = useWallet()
   const [amount, setAmount] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,9 +77,9 @@ export function StakeForm({ coachId, coachOwner, currentStake = 0, onSuccess }: 
       // Use the stakeTokens function from contracts.ts
       const stakeAmount = Math.floor(parseFloat(amount) * 100000000) // Convert to octas
       
-      const transactionHash = await stakeTokens(account, coachId, stakeAmount, signAndSubmitTransaction)
+      const result = await stakeTokens(account.address, coachId, stakeAmount, signAndSubmitTransaction)
 
-      setSuccess(`Successfully staked ${amount} APT! Transaction: ${transactionHash}`)
+      setSuccess(`Successfully staked ${amount} APT for Coach #${result.coachId}! Transaction: ${result.hash}`)
       setAmount('')
       
       if (onSuccess) {

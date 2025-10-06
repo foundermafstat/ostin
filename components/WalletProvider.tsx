@@ -56,7 +56,8 @@ function WalletContextProvider({ children }: WalletProviderProps) {
 }
 
 function useWalletAdapter() {
-  const { connected, account, wallet, connect, disconnect, signAndSubmitTransaction } = useAptosWallet()
+  const aptosWallet = useAptosWallet()
+  const { connected, account, wallet, connect, disconnect, signAndSubmitTransaction } = aptosWallet
   const [balance, setBalance] = useState<string | null>(null)
 
   // Get balance when wallet connects
@@ -64,9 +65,9 @@ function useWalletAdapter() {
     const fetchBalance = async () => {
       if (connected && account?.accountAddress) {
         try {
-        const accountResource = await aptosClient.getAccountAPTAmount({
-          accountAddress: account.accountAddress,
-        })
+          const accountResource = await aptosClient.getAccountAPTAmount({
+            accountAddress: account.accountAddress,
+          })
           setBalance((accountResource / 100000000).toFixed(4)) // Convert from octas to APT
         } catch (error) {
           console.error('Failed to fetch balance:', error)
@@ -86,11 +87,28 @@ function useWalletAdapter() {
     console.log('WalletProvider - connected:', connected)
     console.log('WalletProvider - signAndSubmitTransaction:', signAndSubmitTransaction)
     console.log('WalletProvider - signAndSubmitTransaction type:', typeof signAndSubmitTransaction)
+    if (signAndSubmitTransaction) {
+      console.log('WalletProvider - signAndSubmitTransaction function details:', {
+        name: signAndSubmitTransaction.name,
+        length: signAndSubmitTransaction.length,
+        toString: signAndSubmitTransaction.toString().substring(0, 100)
+      })
+    }
     if (account) {
       console.log('WalletProvider - account.accountAddress:', account.accountAddress)
       console.log('WalletProvider - account.address:', account.address)
     }
-  }, [account, connected, signAndSubmitTransaction])
+    
+    // Check if wallet has the expected methods
+    if (aptosWallet) {
+      console.log('WalletProvider - aptosWallet:', aptosWallet)
+      console.log('WalletProvider - aptosWallet.connected:', aptosWallet.connected)
+      console.log('WalletProvider - aptosWallet.account:', aptosWallet.account)
+      console.log('WalletProvider - aptosWallet.wallet:', aptosWallet.wallet)
+      console.log('WalletProvider - aptosWallet.signTransaction:', aptosWallet.signTransaction)
+      console.log('WalletProvider - aptosWallet.signAndSubmitTransaction:', aptosWallet.signAndSubmitTransaction)
+    }
+  }, [account, connected, signAndSubmitTransaction, aptosWallet])
 
   return {
     connected,

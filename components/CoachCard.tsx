@@ -49,8 +49,8 @@ export function CoachCard({ coach }: CoachCardProps) {
       }
       
       const amount = parseFloat(stakingAmount) * 100000000 // Convert APT to octas (1 APT = 10^8 octas)
-      const transactionHash = await stakeTokens(account, coach.id, amount, signAndSubmitTransaction)
-      addToast(`Tokens staked successfully! Transaction: ${transactionHash}`, 'success')
+      const result = await stakeTokens(account.address, coach.id, amount, signAndSubmitTransaction)
+      addToast(`Tokens staked successfully for Coach #${result.coachId}! Transaction: ${result.hash}`, 'success')
       setStakingAmount('')
     } catch (error) {
       console.error('Error staking tokens:', error)

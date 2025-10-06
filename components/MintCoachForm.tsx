@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { addToast } from '@/components/Toaster'
 import { useWallet } from '@/components/WalletProvider'
-import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react'
 import { mintCoach } from '@/lib/contracts'
 
 export function MintCoachForm() {
@@ -12,7 +11,6 @@ export function MintCoachForm() {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{[key: string]: string}>({})
   const { connected, account, signAndSubmitTransaction } = useWallet()
-  const { signAndSubmitTransaction: aptosSignAndSubmitTransaction } = useAptosWallet()
 
 
   const exampleRules = [
@@ -54,46 +52,70 @@ export function MintCoachForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    console.log('🎯 MintCoachForm: Form submitted')
+    
     if (!validateForm()) {
+      console.log('❌ MintCoachForm: Form validation failed')
       return
     }
 
+    console.log('✅ MintCoachForm: Form validation passed')
     setLoading(true)
     setErrors({})
     
     try {
-      // Mint using the contract function with wallet signing
-      console.log('MintCoachForm - aptosSignAndSubmitTransaction:', aptosSignAndSubmitTransaction)
-      console.log('MintCoachForm - signAndSubmitTransaction:', signAndSubmitTransaction)
-      console.log('MintCoachForm - aptosSignAndSubmitTransaction type:', typeof aptosSignAndSubmitTransaction)
-      console.log('MintCoachForm - signAndSubmitTransaction type:', typeof signAndSubmitTransaction)
+      console.log('📋 MintCoachForm: Starting mint process...')
+      console.log('  - connected:', connected)
+      console.log('  - account:', account)
+      console.log('  - account.address:', account?.address)
+      console.log('  - rules:', rules.trim())
+      console.log('  - signAndSubmitTransaction:', signAndSubmitTransaction)
+      console.log('  - signAndSubmitTransaction type:', typeof signAndSubmitTransaction)
       
-      const actualSignAndSubmitTransaction = aptosSignAndSubmitTransaction || signAndSubmitTransaction
-      console.log('MintCoachForm - actualSignAndSubmitTransaction:', actualSignAndSubmitTransaction)
-      console.log('MintCoachForm - actualSignAndSubmitTransaction type:', typeof actualSignAndSubmitTransaction)
+      if (!account) {
+        console.error('❌ MintCoachForm: Account not available')
+        throw new Error('Account is not available. Please reconnect your wallet.')
+      }
       
-      if (!actualSignAndSubmitTransaction) {
+      if (!account.address) {
+        console.error('❌ MintCoachForm: Account address not available')
+        throw new Error('Account address is not available. Please reconnect your wallet.')
+      }
+      
+      if (!signAndSubmitTransaction) {
+        console.error('❌ MintCoachForm: signAndSubmitTransaction not available')
         throw new Error('Wallet transaction function is not available. Please reconnect your wallet.')
       }
       
-      if (typeof actualSignAndSubmitTransaction !== 'function') {
-        throw new Error('Wallet transaction function is invalid. Please reconnect your wallet.')
-      }
+      console.log('🚀 MintCoachForm: Calling mintCoach function...')
+      const result = await mintCoach(account.address, rules.trim(), signAndSubmitTransaction)
       
-      const transactionHash = await mintCoach(account!, rules.trim(), actualSignAndSubmitTransaction)
-      addToast(`Coach minted successfully! Transaction: ${transactionHash}`, 'success')
+      console.log('🎉 MintCoachForm: Mint successful!')
+      console.log('  - Result:', result)
+      
+      addToast(`Coach #${result.coachId} minted successfully! Transaction: ${result.hash}`, 'success')
       
       setRules('')
       
       // Refresh the page to show the new coach
+      console.log('🔄 MintCoachForm: Scheduling page refresh...')
       setTimeout(() => {
+        console.log('🔄 MintCoachForm: Refreshing page...')
         window.location.reload()
       }, 2000)
     } catch (error) {
+      console.error('💥 MintCoachForm: Error occurred:')
+      console.error('  - Error type:', typeof error)
+      console.error('  - Error message:', error instanceof Error ? error.message : String(error))
+      console.error('  - Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+      
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.log('📢 MintCoachForm: Showing error toast:', errorMessage)
+      
       addToast(`Failed to mint coach: ${errorMessage}`, 'error')
       setErrors({ submit: errorMessage })
     } finally {
+      console.log('🏁 MintCoachForm: Process completed, setting loading to false')
       setLoading(false)
     }
   }

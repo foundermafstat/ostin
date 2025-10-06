@@ -1,5 +1,5 @@
 import { aptosClient, CONTRACT_MODULE } from './aptosClient'
-import { Account } from '@aptos-labs/ts-sdk'
+import { Account, AccountAddress } from '@aptos-labs/ts-sdk'
 
 export interface Coach {
   id: number
@@ -21,97 +21,244 @@ export interface LeaderboardEntry {
   staked_amount: number
 }
 
-export async function mintCoach(account: { address: string }, rules: string, signAndSubmitTransaction: any): Promise<string> {
-  // Validate inputs
-  if (!account) {
-    throw new Error('Account is required')
-  }
+export async function mintCoach(
+  walletAddress: string,
+  rules: string,
+  signAndSubmitTransaction?: any
+): Promise<{ hash: string; coachId: number }> {
+  console.log('🚀 === STARTING COACH MINT PROCESS ===')
   
-  if (!account.address) {
-    throw new Error('Account address is not available')
+  // Validate inputs
+  console.log('📋 Validating inputs...')
+  console.log('  - walletAddress:', walletAddress, typeof walletAddress)
+  console.log('  - rules:', rules, typeof rules, 'length:', rules?.length)
+  console.log('  - signAndSubmitTransaction:', typeof signAndSubmitTransaction)
+  
+  if (!walletAddress) {
+    console.error('❌ Wallet address validation failed')
+    throw new Error('Wallet address is required')
   }
   
   if (!rules || typeof rules !== 'string') {
+    console.error('❌ Rules validation failed')
     throw new Error('Rules must be a non-empty string')
   }
   
   if (rules.length > 1000) {
+    console.error('❌ Rules length validation failed')
     throw new Error('Rules must be less than 1000 characters')
   }
 
-  // Enhanced validation for signAndSubmitTransaction
   if (!signAndSubmitTransaction) {
-    throw new Error('Wallet transaction function is not available. Please reconnect your wallet.')
-  }
-  
-  if (typeof signAndSubmitTransaction !== 'function') {
+    console.warn('⚠️ signAndSubmitTransaction not provided, will try direct approach')
+  } else if (typeof signAndSubmitTransaction !== 'function') {
+    console.error('❌ signAndSubmitTransaction validation failed - not a function')
     throw new Error('Wallet transaction function is invalid. Please reconnect your wallet.')
   }
 
+  console.log('✅ Input validation passed')
+
   // Convert string to Uint8Array for vector<u8>
+  console.log('🔄 Converting rules to bytes...')
   const rulesBytes = new Uint8Array(Buffer.from(rules, 'utf8'))
   
-  console.log('Minting coach with rules:', rules)
-  console.log('Rules bytes length:', rulesBytes.length)
-  console.log('Account address:', account.address)
-  console.log('Contract module:', CONTRACT_MODULE)
+  console.log('📊 Mint details:')
+  console.log('  - Wallet address:', walletAddress)
+  console.log('  - Rules:', rules)
+  console.log('  - Rules bytes length:', rulesBytes.length)
+  console.log('  - Rules bytes array:', Array.from(rulesBytes))
+  console.log('  - Contract module:', CONTRACT_MODULE)
+  console.log('  - Contract address:', CONTRACT_MODULE.split('::')[0])
   
   try {
-    // Build the transaction using the correct format
-    const transaction = await aptosClient.transaction.build.simple({
-      sender: account.address,
-      data: {
-        function: `${CONTRACT_MODULE}::mint_coach` as any,
-        typeArguments: [],
-        functionArguments: [rulesBytes],
-      },
+    console.log('🔨 Building mint transaction...')
+
+    // Build transaction with proper sender
+    const transactionPayload = {
+      function: `${CONTRACT_MODULE}::mint_coach` as any,
+      typeArguments: [],
+      functionArguments: [rulesBytes],
+    }
+    
+    console.log('📦 Transaction payload:', JSON.stringify(transactionPayload, null, 2))
+
+    // Try building transaction in the old format that wallet adapter expects
+    console.log('🔄 Building transaction in legacy format...')
+    const legacyTransaction = {
+      type: 'entry_function_payload',
+      function: transactionPayload.function,
+      type_arguments: transactionPayload.typeArguments,
+      arguments: transactionPayload.functionArguments,
+    }
+    console.log('✅ Legacy transaction created')
+
+    // Log legacy transaction structure for debugging
+    console.log('📋 Legacy transaction structure analysis:')
+    console.log('  - Legacy transaction type:', typeof legacyTransaction)
+    console.log('  - Legacy transaction keys:', Object.keys(legacyTransaction))
+    console.log('  - Legacy transaction:', legacyTransaction)
+
+    console.log('✅ Legacy transaction built successfully')
+    console.log('📄 Legacy transaction details:', {
+      legacyTransaction: legacyTransaction
     })
 
-    console.log('Transaction built successfully')
-
-    // Submit the transaction
-    const committedTransaction = await signAndSubmitTransaction(transaction)
-
-    console.log('Transaction submitted:', committedTransaction.hash)
+    // Submit transaction using window.aptos (proven working approach)
+    console.log('✍️ Submitting transaction using window.aptos...')
+    
+    let response
+    
+    try {
+      if (typeof window !== 'undefined' && (window as any).aptos) {
+        console.log('🔄 Using window.aptos directly...')
+        const windowAptos = (window as any).aptos
+        console.log('🔄 window.aptos available:', !!windowAptos)
+        
+        if (windowAptos.signAndSubmitTransaction) {
+          response = await windowAptos.signAndSubmitTransaction(legacyTransaction)
+          console.log('✅ Success with window.aptos!')
+        } else {
+          throw new Error('window.aptos.signAndSubmitTransaction not available')
+        }
+      } else {
+        throw new Error('window.aptos not available')
+      }
+    } catch (windowError) {
+      console.error('❌ Failed with window.aptos:', windowError)
+      throw new Error('Wallet not available. Please make sure Petra wallet is installed and connected.')
+    }
+    
+    console.log('✅ Transaction submitted successfully!')
+    
+    console.log('📨 Final response:', response)
+    console.log('📨 Response type:', typeof response)
+    console.log('📨 Response constructor:', response?.constructor?.name)
+    
+    console.log('✅ Transaction submitted successfully')
+    console.log('📤 Transaction response:', {
+      hash: response?.hash,
+      success: response?.success,
+      vm_status: response?.vm_status,
+      gas_used: response?.gas_used,
+      gas_unit_price: response?.gas_unit_price,
+      type: response?.type
+    })
 
     // Wait for transaction confirmation
-    await aptosClient.waitForTransaction({
-      transactionHash: committedTransaction.hash,
+    console.log('⏳ Waiting for transaction confirmation...')
+    console.log('  - Transaction hash:', response?.hash)
+    
+    if (!response?.hash) {
+      throw new Error('Transaction response does not contain a hash')
+    }
+    
+    const result = await aptosClient.waitForTransaction({
+      transactionHash: response.hash,
     })
 
-    console.log('Transaction confirmed:', committedTransaction.hash)
-    return committedTransaction.hash
-  } catch (error) {
-    console.error('Error in mintCoach transaction:', error)
+    console.log('✅ Transaction confirmed')
+    console.log('📋 Transaction result:', {
+      hash: result?.hash,
+      success: result?.success,
+      vm_status: result?.vm_status,
+      gas_used: result?.gas_used,
+      events_count: (result && 'events' in result && result.events) ? result.events.length : 0,
+      version: result?.version,
+      type: result?.type
+    })
+
+    // Get the coach ID from transaction events
+    console.log('🔍 Searching for CoachMinted event...')
+    let coachId = 0
     
-    // Provide more specific error messages
+    if (result && 'events' in result && result.events) {
+      console.log('📅 Found', result.events.length, 'events in transaction')
+      
+      for (let i = 0; i < result.events.length; i++) {
+        const event = result.events[i]
+        console.log(`  Event ${i}:`, {
+          type: event.type,
+          data: event.data
+        })
+        
+        if (event.type === `${CONTRACT_MODULE}::CoachMinted`) {
+          const eventData = event.data as any
+          coachId = parseInt(eventData.coach_id)
+          console.log('🎉 Found CoachMinted event!')
+          console.log('  - Coach ID:', coachId)
+          console.log('  - Event data:', eventData)
+          break
+        }
+      }
+      
+      if (coachId === 0) {
+        console.warn('⚠️ CoachMinted event not found in transaction events')
+        console.log('Available event types:', result.events ? result.events.map(e => e.type) : 'No events')
+      }
+    } else {
+      console.warn('⚠️ No events found in transaction result')
+    }
+
+    console.log('🎊 Coach minted successfully!')
+    console.log('📊 Final result:', {
+      hash: response.hash,
+      coachId: coachId
+    })
+
+    return {
+      hash: response.hash,
+      coachId: coachId
+    }
+  } catch (error) {
+    console.error('💥 Error in mintCoach transaction:')
+    console.error('  - Error type:', typeof error)
+    console.error('  - Error constructor:', error?.constructor?.name)
+    console.error('  - Error message:', error instanceof Error ? error.message : String(error))
+    console.error('  - Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    
     if (error instanceof Error) {
+      console.error('  - Error details:', {
+        name: error.name,
+        message: error.message
+      })
+      
+      // Provide more specific error messages
       if (error.message.includes('Resource not found')) {
+        console.error('❌ Contract resource not found')
         throw new Error('Contract not found. Please make sure the contract is deployed and initialized.')
       } else if (error.message.includes('insufficient balance')) {
+        console.error('❌ Insufficient balance')
         throw new Error('Insufficient balance. Please make sure you have enough APT tokens.')
       } else if (error.message.includes('rejected')) {
+        console.error('❌ Transaction rejected by user')
         throw new Error('Transaction was rejected by the user.')
       } else if (error.message.includes('timeout')) {
+        console.error('❌ Transaction timeout')
         throw new Error('Transaction timed out. Please try again.')
-      } else if (error.message.includes('Cannot use \'in\' operator')) {
-        throw new Error('Wallet connection issue. Please reconnect your wallet.')
+      } else if (error.message.includes('E_INVALID_RULES')) {
+        console.error('❌ Invalid rules format')
+        throw new Error('Invalid rules format. Please check your trading rules.')
+      } else if (error.message.includes('E_CONTRACT_NOT_INITIALIZED')) {
+        console.error('❌ Contract not initialized')
+        throw new Error('Contract is not initialized. Please initialize the contract first.')
       }
     }
     
+    console.error('🚨 Re-throwing original error for user to see')
     throw error
   }
 }
 
 
-export async function stakeTokens(account: { address: string }, coachId: number, amount: number, signAndSubmitTransaction: any): Promise<string> {
+export async function stakeTokens(
+  walletAddress: string, 
+  coachId: number, 
+  amount: number, 
+  signAndSubmitTransaction: any
+): Promise<{ hash: string; coachId: number; stakedAmount: number }> {
   // Validate inputs
-  if (!account) {
-    throw new Error('Account is required')
-  }
-  
-  if (!account.address) {
-    throw new Error('Account address is not available')
+  if (!walletAddress) {
+    throw new Error('Wallet address is required')
   }
   
   if (!coachId || coachId <= 0) {
@@ -131,32 +278,72 @@ export async function stakeTokens(account: { address: string }, coachId: number,
     throw new Error('Wallet transaction function is invalid. Please reconnect your wallet.')
   }
 
-  console.log('Staking tokens for coach:', coachId, 'amount:', amount)
-  console.log('Account address:', account.address)
+  console.log('=== STAKING TOKENS ===')
+  console.log('Wallet address:', walletAddress)
+  console.log('Coach ID:', coachId)
+  console.log('Stake amount (octas):', amount)
+  console.log('Stake amount (APT):', amount / 100000000)
   console.log('Contract module:', CONTRACT_MODULE)
+  console.log('Contract address:', CONTRACT_MODULE.split('::')[0])
 
   try {
-    const transaction = await aptosClient.transaction.build.simple({
-      sender: account.address,
-      data: {
-        function: `${CONTRACT_MODULE}::stake_tokens` as any,
-        typeArguments: [],
-        functionArguments: [coachId, amount],
-      },
+    console.log('Building stake transaction...')
+
+    // Build transaction payload in legacy format
+    const transactionPayload = {
+      function: `${CONTRACT_MODULE}::stake_tokens` as any,
+      typeArguments: [],
+      functionArguments: [coachId, amount],
+    }
+
+    // Create legacy transaction format
+    const legacyTransaction = {
+      type: 'entry_function_payload',
+      function: transactionPayload.function,
+      type_arguments: transactionPayload.typeArguments,
+      arguments: transactionPayload.functionArguments,
+    }
+
+    console.log('Stake transaction built successfully:', legacyTransaction)
+
+    // Sign and submit the transaction using window.aptos
+    console.log('Signing and submitting stake transaction using window.aptos...')
+    
+    let response
+    
+    try {
+      if (typeof window !== 'undefined' && (window as any).aptos) {
+        const windowAptos = (window as any).aptos
+        if (windowAptos.signAndSubmitTransaction) {
+          response = await windowAptos.signAndSubmitTransaction(legacyTransaction)
+          console.log('✅ Stake transaction submitted successfully!')
+        } else {
+          throw new Error('window.aptos.signAndSubmitTransaction not available')
+        }
+      } else {
+        throw new Error('window.aptos not available')
+      }
+    } catch (windowError) {
+      console.error('❌ Failed with window.aptos for stake:', windowError)
+      throw new Error('Wallet not available. Please make sure Petra wallet is installed and connected.')
+    }
+    
+    console.log('Stake transaction response:', response)
+
+    // Wait for transaction confirmation
+    console.log('Waiting for stake transaction confirmation...')
+    const result = await aptosClient.waitForTransaction({
+      transactionHash: response.hash,
     })
 
-    console.log('Stake transaction built successfully')
+    console.log('Stake transaction confirmed:', result)
+    console.log(`Successfully staked ${amount / 100000000} APT for coach ${coachId}`)
 
-    const committedTransaction = await signAndSubmitTransaction(transaction)
-
-    console.log('Stake transaction submitted:', committedTransaction.hash)
-
-    await aptosClient.waitForTransaction({
-      transactionHash: committedTransaction.hash,
-    })
-
-    console.log('Stake transaction confirmed:', committedTransaction.hash)
-    return committedTransaction.hash
+    return {
+      hash: response.hash,
+      coachId: coachId,
+      stakedAmount: amount
+    }
   } catch (error) {
     console.error('Error in stakeTokens transaction:', error)
     
@@ -178,6 +365,8 @@ export async function stakeTokens(account: { address: string }, coachId: number,
         throw new Error('This coach is already active and staked.')
       } else if (error.message.includes('E_INVALID_AMOUNT')) {
         throw new Error('Invalid stake amount.')
+      } else if (error.message.includes('E_CONTRACT_NOT_INITIALIZED')) {
+        throw new Error('Contract is not initialized. Please initialize the contract first.')
       }
     }
     
@@ -552,11 +741,15 @@ export async function getUserCoaches(userAddress: string): Promise<Coach[]> {
       return []
     }
 
+    console.log('Getting user coaches for address:', userAddress)
+
     // Get user's coach IDs from UserCoaches resource
     const userCoachesResource = await aptosClient.getAccountResource({
       accountAddress: userAddress,
       resourceType: `${CONTRACT_MODULE}::UserCoaches` as any,
     })
+
+    console.log('User coaches resource:', userCoachesResource)
 
     if (!userCoachesResource || !userCoachesResource.data) {
       console.warn('User coaches resource not found - user has no coaches yet')
@@ -564,6 +757,7 @@ export async function getUserCoaches(userAddress: string): Promise<Coach[]> {
     }
 
     const coachIds = userCoachesResource.data.coaches as string[]
+    console.log('User coach IDs:', coachIds)
     
     // Get each coach from the main contract
     const coaches: Coach[] = []
@@ -574,14 +768,22 @@ export async function getUserCoaches(userAddress: string): Promise<Coach[]> {
       }
     }
     
+    console.log('User coaches found:', coaches.length)
     return coaches
   } catch (error) {
     console.error('Error fetching user coaches:', error)
-    // If resource not found, return empty array (user has no coaches)
-    if (error instanceof Error && error.message.includes('Resource not found')) {
-      console.warn('User has no coaches yet')
+    
+    // Handle resource not found error - user has no coaches yet
+    if (error instanceof Error && (
+      error.message.includes('Resource not found') ||
+      error.message.includes('resource_not_found') ||
+      error.message.includes('not found') ||
+      error.message.includes('AptosApiError')
+    )) {
+      console.warn('User has no coaches yet - UserCoaches resource does not exist')
       return []
     }
+    
     return []
   }
 }
@@ -831,95 +1033,6 @@ export async function getContractStatus(): Promise<{
   }
 }
 
-export async function checkContractStatus(): Promise<{
-  status: 'initialized' | 'not_initialized' | 'error'
-  message: string
-  address: string
-  error?: string
-}> {
-  try {
-    console.log('=== checkContractStatus ===')
-    console.log('Contract address:', CONTRACT_MODULE.split('::')[0])
-    console.log('Full module:', CONTRACT_MODULE)
-    
-    // Try to get the PortfolioCoach resource
-    const resource = await aptosClient.getAccountResource({
-      accountAddress: CONTRACT_MODULE.split('::')[0],
-      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
-    })
-    
-    console.log('Resource response:', resource)
-    console.log('Resource found:', !!resource)
-    console.log('Resource data exists:', !!resource?.data)
-    console.log('Resource data:', resource?.data)
-    
-    // Check if resource exists and has the expected structure
-    // In newer Aptos SDK, data is directly in resource, not resource.data
-    const resourceData = resource?.data || resource;
-    
-    if (resource && resourceData && typeof resourceData === 'object') {
-      // Check for key fields that indicate initialization
-      const hasNextCoachId = resourceData.hasOwnProperty('next_coach_id')
-      const hasCoaches = resourceData.hasOwnProperty('coaches')
-      const hasLeaderboard = resourceData.hasOwnProperty('leaderboard')
-      const hasRequiredFields = hasNextCoachId || hasCoaches || hasLeaderboard
-      
-      console.log('Field checks:', {
-        hasNextCoachId,
-        hasCoaches,
-        hasLeaderboard,
-        hasRequiredFields
-      })
-      console.log('Resource data keys:', Object.keys(resourceData))
-      console.log('next_coach_id value:', resourceData.next_coach_id)
-      console.log('coaches value:', resourceData.coaches)
-      console.log('leaderboard value:', resourceData.leaderboard)
-      
-      if (hasRequiredFields) {
-        return {
-          status: 'initialized',
-          message: 'Contract is initialized and ready to use',
-          address: CONTRACT_MODULE.split('::')[0]
-        }
-      }
-    }
-    
-    // If we get here, the resource exists but doesn't have the expected structure
-    // This means the contract is deployed but not properly initialized
-    return {
-      status: 'not_initialized',
-      message: 'Contract is deployed but not properly initialized. The contract needs to be initialized by the deployer.',
-      address: CONTRACT_MODULE.split('::')[0]
-    }
-  } catch (error) {
-    console.error('Error checking contract status:', error)
-    console.error('Error details:', {
-      name: error instanceof Error ? error.name : 'Unknown',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    })
-    
-    // Check if it's a "Resource not found" error
-    if (error instanceof Error && (
-      error.message.includes('Resource not found') ||
-      error.message.includes('not found') ||
-      error.message.includes('404')
-    )) {
-      return {
-        status: 'not_initialized',
-        message: 'Contract is not deployed or not initialized. The contract needs to be deployed and initialized by the deployer.',
-        address: CONTRACT_MODULE.split('::')[0]
-      }
-    }
-    
-    return {
-      status: 'error',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      address: CONTRACT_MODULE.split('::')[0] || '',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }
-  }
-}
 
 export async function getContractInfo(): Promise<{
   address: string
@@ -1380,6 +1493,58 @@ export async function getContractStatusOverview(): Promise<{
       isInitialized: false,
       error: error instanceof Error ? error.message : 'Unknown error',
       recommendations: ['Check your Aptos CLI configuration and network connectivity']
+    }
+  }
+}
+
+export async function checkContractStatus(): Promise<{
+  contractAddress: string
+  isInitialized: boolean
+  error?: string
+  details?: any
+}> {
+  try {
+    console.log('=== CHECKING CONTRACT STATUS ===')
+    console.log('Contract address:', CONTRACT_MODULE.split('::')[0])
+    console.log('Contract module:', CONTRACT_MODULE)
+    
+    // Try to get the PortfolioCoach resource
+    const resource = await aptosClient.getAccountResource({
+      accountAddress: CONTRACT_MODULE.split('::')[0],
+      resourceType: `${CONTRACT_MODULE}::PortfolioCoach` as any,
+    })
+    
+    console.log('Resource found:', !!resource)
+    console.log('Resource data:', resource?.data)
+    
+    if (resource?.data) {
+      const resourceData = resource.data
+      console.log('next_coach_id:', resourceData.next_coach_id)
+      console.log('total_staked:', resourceData.total_staked)
+      console.log('leaderboard_length:', resourceData.leaderboard_length)
+      
+      return {
+        contractAddress: CONTRACT_MODULE.split('::')[0],
+        isInitialized: true,
+        details: {
+          nextCoachId: resourceData.next_coach_id,
+          totalStaked: resourceData.total_staked,
+          leaderboardLength: resourceData.leaderboard_length
+        }
+      }
+    } else {
+      return {
+        contractAddress: CONTRACT_MODULE.split('::')[0],
+        isInitialized: false,
+        error: 'Resource not found or empty'
+      }
+    }
+  } catch (error) {
+    console.error('Error checking contract status:', error)
+    return {
+      contractAddress: CONTRACT_MODULE.split('::')[0],
+      isInitialized: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     }
   }
 }

@@ -4,22 +4,44 @@ import { useWallet } from '@/components/WalletProvider'
 import { useEffect, useState } from 'react'
 import { CoachCard } from '@/components/CoachCard'
 import { MintCoachForm } from '@/components/MintCoachForm'
-import { Coach, getAllCoaches } from '@/lib/contracts'
+import { TestWallet } from '@/components/TestWallet'
+import { Coach, getUserCoaches, getAllCoaches } from '@/lib/contracts'
 import { Logo } from '@/components/Logo'
+import { Toaster } from '@/components/Toaster'
 
 export default function DashboardPage() {
   const { connected, account } = useWallet()
   const [coaches, setCoaches] = useState<Coach[]>([])
   const [loading, setLoading] = useState(true)
+  const [showAllCoaches, setShowAllCoaches] = useState(false)
 
   useEffect(() => {
     const fetchCoaches = async () => {
       setLoading(true)
       try {
-        console.log('Fetching all coaches from contract...')
-        const coachesData = await getAllCoaches()
-        console.log('Coaches received:', coachesData)
-        setCoaches(coachesData)
+        if (connected && account?.address && !showAllCoaches) {
+          // Try to get user's coaches first
+          console.log('Fetching user coaches from contract...', account.address)
+          const userCoaches = await getUserCoaches(account.address)
+          console.log('User coaches received:', userCoaches)
+          
+          if (userCoaches.length > 0) {
+            setCoaches(userCoaches)
+          } else {
+            // If user has no coaches, show all coaches
+            console.log('User has no coaches, fetching all coaches...')
+            const allCoaches = await getAllCoaches()
+            console.log('All coaches received:', allCoaches)
+            setCoaches(allCoaches)
+            setShowAllCoaches(true)
+          }
+        } else {
+          // Show all coaches
+          console.log('Fetching all coaches from contract...')
+          const allCoaches = await getAllCoaches()
+          console.log('All coaches received:', allCoaches)
+          setCoaches(allCoaches)
+        }
       } catch (error) {
         console.error('Error fetching coaches:', error)
       } finally {
@@ -28,7 +50,7 @@ export default function DashboardPage() {
     }
 
     fetchCoaches()
-  }, [])
+  }, [connected, account?.address, showAllCoaches])
 
   if (!connected) {
     return (
@@ -56,8 +78,38 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6">
+        <TestWallet />
+        
         <div className="bg-white rounded-lg shadow-sm border p-6">
-          <h2 className="text-xl font-semibold mb-4">My Coaches</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">
+              {showAllCoaches ? 'All Coaches' : 'My Coaches'}
+            </h2>
+            {connected && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowAllCoaches(false)}
+                  className={`px-3 py-1 text-sm rounded ${
+                    !showAllCoaches 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  My Coaches
+                </button>
+                <button
+                  onClick={() => setShowAllCoaches(true)}
+                  className={`px-3 py-1 text-sm rounded ${
+                    showAllCoaches 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  All Coaches
+                </button>
+              </div>
+            )}
+          </div>
           
           {loading ? (
             <div className="space-y-4">
@@ -73,11 +125,22 @@ export default function DashboardPage() {
                 <span className="text-2xl">🤖</span>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No Coaches Yet
+                {showAllCoaches ? 'No Coaches in System' : 'No Coaches Yet'}
               </h3>
               <p className="text-gray-600 mb-4">
-                Mint your first AI portfolio coach to get started
+                {showAllCoaches 
+                  ? 'No coaches have been minted in the system yet'
+                  : 'Mint your first AI portfolio coach to get started'
+                }
               </p>
+              {!showAllCoaches && (
+                <button
+                  onClick={() => setShowAllCoaches(true)}
+                  className="text-blue-600 hover:text-blue-800 text-sm"
+                >
+                  View all coaches in system
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid gap-4">
@@ -88,6 +151,8 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      
+      <Toaster />
     </div>
   )
 }
